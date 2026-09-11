@@ -14,7 +14,14 @@ const DATA = path.join(ROOT, 'data');
 const SRC = path.join(ROOT, 'src');
 const DIST = path.join(ROOT, 'dist');
 
-const SITE_URL = 'http://localhost:4170';
+/* Adresse publique utilisée pour les URL canoniques, Open Graph et le sitemap.
+   Vercel expose le domaine de production dans l'environnement. */
+const SITE_URL = (
+  process.env.SITE_URL
+  || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? 'https://' + process.env.VERCEL_PROJECT_PRODUCTION_URL : '')
+  || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '')
+  || 'http://localhost:4170'
+).replace(/\/+$/, '');
 
 /* -------------------------------------------------------------------------- */
 /* Données                                                                     */

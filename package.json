@@ -4,13 +4,14 @@
   "private": true,
   "description": "Copie statique complete du site 417france.com",
   "scripts": {
-    "build": "node build.js",
+    "build": "node scripts/ensure-store.js && node build.js",
     "start": "node build.js && node server.js",
     "serve": "node server.js",
     "seed": "node scripts/seed-store.js",
     "password": "node scripts/reset-password.js",
     "images": "python scripts/fetch-images.py",
-    "check": "node scripts/check.js"
+    "check": "node scripts/check.js",
+    "generate": "node build.js"
   },
   "engines": {
     "node": ">=18"
