@@ -253,6 +253,18 @@ const content = {
 
 /* ---------- Application ---------- */
 
+/* Toute image du contenu éditorial pointe vers un fichier local du dépôt. */
+function localizeDeep(node) {
+  if (Array.isArray(node)) return node.map(localizeDeep);
+  if (node && typeof node === 'object') {
+    Object.keys(node).forEach((key) => { node[key] = localizeDeep(node[key]); });
+    return node;
+  }
+  return typeof node === 'string' ? localImage(node) : node;
+}
+
+localizeDeep(content);
+
 const result = store.update((data) => {
   let enriched = 0;
 
