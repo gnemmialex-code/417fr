@@ -1,0 +1,16 @@
+# Dépendances
+node_modules/
+
+# Site généré : reconstruit par « node build.js »
+dist/
+
+# Base du back-office : contient l'empreinte du mot de passe administrateur
+# ainsi que les clients et commandes. À recréer avec :
+#   node scripts/seed-store.js && node scripts/upgrade-store.js
+data/store.json
+data/store.json.tmp
+
+# Divers
+*.log
+.DS_Store
+Thumbs.db

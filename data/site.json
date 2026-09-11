@@ -1,0 +1,429 @@
+{
+  "name": "417 France",
+  "tagline": "Une peau propre, un esprit clair",
+  "description": "Restez inspiré grâce à des soins durables, profonds et légers, conçus pour accompagner chaque geste de votre routine beauté !",
+  "currency": "EUR",
+  "currencySymbol": "€",
+  "logoDark": "https://417france.com/cdn/shop/files/logo_Fr_noir_petit.png",
+  "logoLight": "https://417france.com/cdn/shop/files/logo_Fr_blanc_petit.png",
+  "logoMark": "https://417france.com/cdn/shop/files/logo_blanc_4e4e692e-d8a0-4022-8a88-7fbf3bb8d3a0.png",
+  "socialImage": "https://417france.com/cdn/shop/files/logo_Fr.jpg",
+  "freeShippingThreshold": 100,
+  "menu": [
+    {
+      "label": "Visage",
+      "url": "/collections/produits-pour-le-visage"
+    },
+    {
+      "label": "Corps",
+      "url": "/collections/produit-pour-le-visage"
+    },
+    {
+      "label": "Tous les soins",
+      "url": "/collections/tout-nos-produits"
+    },
+    {
+      "label": "Notre histoire",
+      "url": "/pages/notre-histoire"
+    },
+    {
+      "label": "Contact",
+      "url": "/pages/contact"
+    }
+  ],
+  "countries": [
+    {
+      "name": "Allemagne",
+      "currency": "EUR",
+      "symbol": "€"
+    },
+    {
+      "name": "Belgique",
+      "currency": "EUR",
+      "symbol": "€"
+    },
+    {
+      "name": "Espagne",
+      "currency": "EUR",
+      "symbol": "€"
+    },
+    {
+      "name": "France",
+      "currency": "EUR",
+      "symbol": "€"
+    },
+    {
+      "name": "Israël",
+      "currency": "ILS",
+      "symbol": "₪"
+    },
+    {
+      "name": "Italie",
+      "currency": "EUR",
+      "symbol": "€"
+    },
+    {
+      "name": "Luxembourg",
+      "currency": "EUR",
+      "symbol": "€"
+    },
+    {
+      "name": "Portugal",
+      "currency": "EUR",
+      "symbol": "€"
+    },
+    {
+      "name": "Royaume-Uni",
+      "currency": "GBP",
+      "symbol": "£"
+    },
+    {
+      "name": "Suisse",
+      "currency": "CHF",
+      "symbol": "CHF"
+    }
+  ],
+  "store": {
+    "eyebrow": "Notre boutique",
+    "name": "Maison Jo'Events",
+    "address": "88 Bd de Courcelles, 75017 Paris",
+    "mapUrl": "https://maps.app.goo.gl/kTkhm3dxoTGi35wp7",
+    "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/logo_joe_event_grand.jpg"
+  },
+  "hero": [
+    {
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_2.jpg",
+      "titleTop": "Une peau propre",
+      "titleBottom": "Un esprit clair",
+      "text": "Restez inspiré grâce à des soins durables, profonds et légers, conçus pour accompagner chaque geste de votre routine beauté.",
+      "cta": "Soins du corps",
+      "url": "/collections/produit-pour-le-visage"
+    },
+    {
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_f_2.jpg",
+      "titleTop": "La beauté",
+      "titleBottom": "libérée",
+      "text": "Découvrez nos produits",
+      "cta": "Soins du visage",
+      "url": "/collections/produits-pour-le-visage"
+    },
+    {
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_f_e.jpg",
+      "titleTop": "La beauté",
+      "titleBottom": "libérée",
+      "text": "Découvrez tous nos produits",
+      "cta": "Nos produits",
+      "url": "/collections/tout-nos-produits"
+    }
+  ],
+  "bestsellersTitle": "Les incontournables",
+  "bestsellers": [
+    {
+      "title": "Gel visage exfoliant au micro Luffa",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Generated_Image_January_12_2026_-_10_07PM.png",
+      "url": "/products/gel-moussant-visage-aux-micro-grains-de-luffa"
+    },
+    {
+      "title": "Masque régénérant à la boue",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Generated_Image_January_12_2026_-_10_32PM.png",
+      "url": "/products/masque-de-boue-regenerant"
+    },
+    {
+      "title": "Beurre corporel aromatique",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Generated_Image_January_12_2026_-_10_20PM.png",
+      "url": "/products/beurre-corporel-aromatique-kiwi-mangue"
+    },
+    {
+      "title": "Crème apaisante S.O.S",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Generated_Image_January_12_2026_-_10_26PM.png",
+      "url": "/products/creme-apaisante-s-o-s"
+    },
+    {
+      "title": "Crème hydratante pour les mains",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Copilot_20260112_214835.png",
+      "url": "/products/anti-oxidant-hand-moisturizer-milk-honey"
+    }
+  ],
+  "marquees": [
+    "Une peau propre, Un esprit clair",
+    "La beauté libérée"
+  ],
+  "announcements": [
+    "Livraison offerte dès 100 € d’achat",
+    "Retour accepté sous 14 jours",
+    "Formules vegan aux minéraux de la mer Morte"
+  ],
+  "brandBlock": {
+    "number": "417",
+    "title": "La fréquence de la peau",
+    "text": "417 mètres sous le niveau de la mer, la mer Morte concentre les minéraux les plus rares. Nos formules les capturent pour révéler l’éclat naturel de votre peau."
+  },
+  "features": [
+    {
+      "icon": "https://cdn.shopify.com/s/files/1/0726/1221/7115/files/ecom-no-replace-oeymwW5fH4ic-sh-1.png",
+      "title": "Livraison",
+      "text": "Livraison offerte à partir de 100 € d’achat"
+    },
+    {
+      "icon": "https://cdn.shopify.com/s/files/1/0726/1221/7115/files/ecom-no-replace-L4i0479FGvic-sh-2.png",
+      "title": "Retours",
+      "text": "Retour accepté sous 14 jours"
+    },
+    {
+      "icon": "https://cdn.shopify.com/s/files/1/0726/1221/7115/files/ecom-no-replace-P6DT5pDvddic-sh-3.png",
+      "title": "Support",
+      "text": "À toute heure, à votre écoute"
+    }
+  ],
+  "ritualTitle": "Le rituel 417",
+  "ritualSub": "Trois gestes, matin et soir, pour une peau nette et reposée.",
+  "ritual": [
+    {
+      "step": "01",
+      "title": "Nettoyer",
+      "text": "Le gel moussant aux micro-grains de luffa débarrasse la peau des impuretés sans l’assécher.",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Generated_Image_January_12_2026_-_10_07PM.png",
+      "url": "/products/gel-moussant-visage-aux-micro-grains-de-luffa"
+    },
+    {
+      "step": "02",
+      "title": "Traiter",
+      "text": "Le masque de boue régénérant relance l’éclat grâce aux minéraux de la mer Morte.",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Generated_Image_January_12_2026_-_10_32PM.png",
+      "url": "/products/masque-de-boue-regenerant"
+    },
+    {
+      "step": "03",
+      "title": "Nourrir",
+      "text": "Le beurre corporel aromatique enveloppe la peau d’un voile nourrissant et parfumé.",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Generated_Image_January_12_2026_-_10_20PM.png",
+      "url": "/products/beurre-corporel-aromatique-kiwi-mangue"
+    }
+  ],
+  "commitments": [
+    "Formules vegan",
+    "Minéraux de la mer Morte",
+    "Sans cortisone",
+    "Non testé sur les animaux",
+    "Fabriqué en Israël",
+    "Emballages recyclables"
+  ],
+  "quote": {
+    "text": "417 mètres sous le niveau de la mer, à l’endroit le plus bas de la Terre, une eau unique concentre depuis des millénaires les minéraux dont la peau a besoin.",
+    "author": "La mer Morte, source de nos formules"
+  },
+  "momentTitle": "Nos produits du moment",
+  "moment": [
+    "gel-moussant-visage-aux-micro-grains-de-luffa",
+    "creme-apaisante-s-o-s",
+    "masque-de-boue-regenerant",
+    "beurre-corporel-aromatique-kiwi-mangue",
+    "anti-oxidant-hand-moisturizer-milk-honey",
+    "anti-oxidant-hand-moisturizer-kiwi-mango",
+    "anti-oxidant-hand-moisturizer-ocean",
+    "anti-oxidant-hand-moisturizer-matcha"
+  ],
+  "pressTitle": "Ils parlent de nous",
+  "press": [
+    {
+      "name": "Prescription Lab",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/prescription-lab-new-logo_bb3c33f5-13ac-4c71-bd34-af73937749eb.png"
+    },
+    {
+      "name": "Amazon",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/Amazon-Logo-1998-2000.jpg"
+    },
+    {
+      "name": "Mon Corner B",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/logo.jpg"
+    },
+    {
+      "name": "Nocibé",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/nocibe_logo-scaled.jpg"
+    },
+    {
+      "name": "Nouvelles Pharmacies",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/logo-np.jpg"
+    },
+    {
+      "name": "Blissim",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/blissim-logo.png"
+    },
+    {
+      "name": "Beauté Test",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/beaute-test-logo.jpg"
+    },
+    {
+      "name": "Feelbe",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/feelbe-new-logo.webp"
+    },
+    {
+      "name": "Viata",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/online-apotheek-viata.jpg"
+    }
+  ],
+  "newsletter": {
+    "title": "Inscrivez-vous à notre Newsletter",
+    "text": "Recevez des offres exclusives et un accès anticipé aux nouveaux produits."
+  },
+  "policies": [
+    {
+      "handle": "privacy-policy",
+      "title": "Politique de confidentialité"
+    },
+    {
+      "handle": "contact-information",
+      "title": "Coordonnées"
+    },
+    {
+      "handle": "terms-of-service",
+      "title": "Conditions d’utilisation"
+    },
+    {
+      "handle": "refund-policy",
+      "title": "Politique de remboursement"
+    },
+    {
+      "handle": "shipping-policy",
+      "title": "Politique d’expédition"
+    },
+    {
+      "handle": "terms-of-sale",
+      "title": "Conditions générales de vente"
+    },
+    {
+      "handle": "legal-notice",
+      "title": "Mentions légales"
+    }
+  ],
+  "fonts": "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Jost:wght@300;400;500&display=swap",
+  "heroSingle": {
+    "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_2.jpg",
+    "eyebrow": "Soins minéraux de la mer Morte",
+    "titleTop": "Une peau propre,",
+    "titleBottom": "un esprit clair",
+    "text": "Des soins durables, profonds et légers, formulés autour des minéraux les plus rares de la planète.",
+    "primary": {
+      "label": "Découvrir les soins",
+      "url": "/collections/tout-nos-produits"
+    },
+    "secondary": {
+      "label": "Notre histoire",
+      "url": "/pages/notre-histoire"
+    }
+  },
+  "categories": [
+    {
+      "eyebrow": "Visage",
+      "title": "Révéler l’éclat",
+      "text": "Nettoyants, sérums, masques et crèmes pour une peau nette, lisse et reposée.",
+      "cta": "Soins du visage",
+      "url": "/collections/produits-pour-le-visage",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_f_2.jpg"
+    },
+    {
+      "eyebrow": "Corps",
+      "title": "Nourrir en profondeur",
+      "text": "Beurres, gommages et soins des mains au parfum enveloppant, pour une peau douce toute la journée.",
+      "cta": "Soins du corps",
+      "url": "/collections/produit-pour-le-visage",
+      "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/854_Aromatic-Deep-Nutrition-Body-Butter-Milk-Honey_Serenity-Legend_Lifestyle_result.webp"
+    }
+  ],
+  "facts": [
+    {
+      "value": "−417 m",
+      "label": "Sous le niveau de la mer",
+      "text": "Le point le plus bas de la Terre, où l’eau concentre ses minéraux depuis des millénaires."
+    },
+    {
+      "value": "100 %",
+      "label": "Formules vegan",
+      "text": "Sans ingrédient d’origine animale, sans cortisone, non testées sur les animaux."
+    },
+    {
+      "value": "14 j",
+      "label": "Pour changer d’avis",
+      "text": "Retour accepté sous quatorze jours, livraison offerte dès 100 € d’achat."
+    }
+  ],
+  "storyTeaser": {
+    "eyebrow": "Notre source",
+    "title": "Née au point le plus bas de la Terre",
+    "text": "À 417 mètres sous le niveau de la mer, la mer Morte est un laboratoire naturel. Son eau, dix fois plus concentrée que celle des océans, dépose sur la peau les minéraux dont elle a besoin pour se réparer. Nos formules la captent, l’associent à des huiles végétales et n’y ajoutent rien d’inutile.",
+    "cta": "Lire notre histoire",
+    "url": "/pages/notre-histoire",
+    "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_f_e.jpg"
+  },
+  "storyPage": {
+    "title": "Notre histoire",
+    "lead": "417 mètres sous le niveau de la mer, une eau unique. C’est de là que vient chacun de nos soins.",
+    "hero": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_2.jpg",
+    "chapters": [
+      {
+        "eyebrow": "La source",
+        "title": "Un laboratoire à ciel ouvert",
+        "text": "La mer Morte n’est pas une mer comme les autres. Fermée, évaporée par le soleil du désert, elle concentre magnésium, potassium, calcium et brome dans des proportions qu’aucune autre eau ne possède. Depuis l’Antiquité, on vient s’y baigner pour apaiser la peau. Nos formules partent de cette eau, infusée directement, sans la diluer de promesses.",
+        "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_f_2.jpg"
+      },
+      {
+        "eyebrow": "La formule",
+        "title": "Le minéral, puis rien d’inutile",
+        "text": "Autour de l’eau de la mer Morte, nous ajoutons ce qui sert la peau et seulement cela : huiles d’amande douce, d’avocat, de pépins de raisin et de jojoba, aloe vera, vitamines A, B, C, E et F. Toutes nos formules sont vegan, sans cortisone, et ne sont jamais testées sur les animaux.",
+        "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_f_e.jpg"
+      },
+      {
+        "eyebrow": "Le geste",
+        "title": "Trois minutes, matin et soir",
+        "text": "Un soin n’a de valeur que s’il trouve sa place dans une journée. Nos textures pénètrent vite, ne laissent pas de film gras et se parfument juste assez pour accompagner le geste sans l’encombrer. Nettoyer, traiter, nourrir : trois minutes suffisent.",
+        "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/854_Aromatic-Deep-Nutrition-Body-Butter-Milk-Honey_Serenity-Legend_Lifestyle_result.webp"
+      }
+    ]
+  },
+  "faqTitle": "Questions fréquentes",
+  "faq": [
+    {
+      "q": "Quels sont les délais de livraison ?",
+      "a": "Les commandes passées avant 14 h sont expédiées le jour même. Comptez deux à trois jours ouvrés en France métropolitaine, quatre à six jours pour la Belgique, le Luxembourg et la Suisse."
+    },
+    {
+      "q": "La livraison est-elle offerte ?",
+      "a": "Oui, dès 100 € d’achat. En dessous, la participation aux frais d’expédition est de 6,90 € en point relais comme à domicile."
+    },
+    {
+      "q": "Puis-je retourner un produit ?",
+      "a": "Vous disposez de quatorze jours après réception pour nous retourner un produit non ouvert. Écrivez-nous et nous vous envoyons l’étiquette de retour."
+    },
+    {
+      "q": "Vos produits conviennent-ils aux peaux sensibles ?",
+      "a": "La gamme est formulée sans cortisone et pensée pour les peaux réactives. La Crème Apaisante S.O.S a été conçue précisément pour les irritations, rougeurs et démangeaisons."
+    },
+    {
+      "q": "Vos formules sont-elles vegan ?",
+      "a": "Toutes nos formules sont vegan et ne sont jamais testées sur les animaux. Les emballages sont recyclables."
+    },
+    {
+      "q": "Où trouver vos produits en boutique ?",
+      "a": "Chez Maison Jo’Events, 88 boulevard de Courcelles à Paris, ainsi que chez nos revendeurs partenaires. La page Points de vente recense les adresses."
+    }
+  ],
+  "reassurance": [
+    {
+      "title": "Livraison offerte",
+      "text": "Dès 100 € d’achat, en France et en Belgique."
+    },
+    {
+      "title": "Expédition sous 24 h",
+      "text": "Commande avant 14 h, préparée le jour même."
+    },
+    {
+      "title": "Retour sous 14 jours",
+      "text": "Étiquette de retour fournie sur simple demande."
+    },
+    {
+      "title": "Paiement sécurisé",
+      "text": "Carte bancaire, Apple Pay et PayPal."
+    }
+  ],
+  "bestsellersLede": "Les soins que nos clientes et clients rachètent, saison après saison."
+}

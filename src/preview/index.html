@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Aperçu mobile — 417 France</title>
+<style>
+  :root {
+    --ink: #17130f;
+    --panel: #1e1915;
+    --bone: #f7f3ee;
+    --line: rgba(247, 243, 238, 0.14);
+    --muted: rgba(247, 243, 238, 0.58);
+    --mineral: #13787f;
+    --r: 12px;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, #2a231d, var(--ink) 60%);
+    color: var(--bone);
+    font: 14px/1.5 "Jost", "Helvetica Neue", Arial, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  a { color: inherit; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+    padding: 14px clamp(14px, 3vw, 28px);
+    border-bottom: 1px solid var(--line);
+    background: rgba(23, 19, 15, 0.7);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .bar__brand { display: flex; align-items: center; gap: 10px; margin-right: 6px; }
+  .bar__mark {
+    display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px;
+    background: rgba(247, 243, 238, 0.1); font-size: 12px; letter-spacing: 0.02em;
+  }
+  .bar__brand strong { display: block; font-size: 13px; font-weight: 500; }
+  .bar__brand span { display: block; font-size: 11px; color: var(--muted); }
+
+  .field { display: flex; align-items: center; gap: 7px; }
+  .field label {
+    font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+  select, .btn {
+    font: inherit; font-size: 12.5px; color: var(--bone);
+    background: rgba(247, 243, 238, 0.07);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 14px; cursor: pointer;
+    transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
+  }
+  select { max-width: 260px; }
+  select option { background: var(--panel); color: var(--bone); }
+  select:hover, .btn:hover { background: rgba(247, 243, 238, 0.14); border-color: rgba(247, 243, 238, 0.3); }
+  .btn.is-on { background: var(--mineral); border-color: var(--mineral); }
+  .bar__right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .size { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .stage {
+    flex: 1; min-height: 0; display: grid; place-items: start center;
+    padding: clamp(16px, 3vh, 34px) 20px;
+    overflow: auto;
+  }
+  .wrap { transform-origin: center top; transition: transform 0.3s var(--ease); }
+
+  .phone {
+    position: relative; padding: 14px;
+    background: linear-gradient(160deg, #3a322b, #17130f);
+    border-radius: 46px;
+    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(247, 243, 238, 0.12);
+  }
+  .phone::before {
+    content: ""; position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+    width: 96px; height: 24px; border-radius: 999px; background: #0d0b09; z-index: 3;
+  }
+  .phone--flat { border-radius: 26px; padding: 12px; }
+  .phone--flat::before { display: none; }
+
+  .screen {
+    position: relative; overflow: hidden; border-radius: 34px; background: #f7f3ee;
+    transition: width 0.3s var(--ease), height 0.3s var(--ease);
+  }
+  .phone--flat .screen { border-radius: 16px; }
+  .screen iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  .hint {
+    text-align: center; font-size: 11.5px; color: var(--muted);
+    padding: 0 20px 24px;
+  }
+  .hint code {
+    background: rgba(247, 243, 238, 0.08); padding: 2px 7px; border-radius: 5px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  @media (max-width: 760px) {
+    .bar__right { width: 100%; margin-left: 0; }
+    select { max-width: 100%; flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar__brand">
+    <span class="bar__mark">417</span>
+    <span><strong>Aperçu mobile</strong><span>Rendu réel dans un cadre de téléphone</span></span>
+  </div>
+
+  <div class="field">
+    <label for="device">Appareil</label>
+    <select id="device"></select>
+  </div>
+
+  <div class="field">
+    <label for="page">Page</label>
+    <select id="page"></select>
+  </div>
+
+  <div class="bar__right">
+    <span class="size" id="size">—</span>
+    <button type="button" class="btn" id="rotate">Pivoter</button>
+    <button type="button" class="btn is-on" id="fit">Ajuster</button>
+    <button type="button" class="btn" id="reload">Recharger</button>
+    <a class="btn" id="open" href="/" target="_blank" rel="noopener">Ouvrir en grand ↗</a>
+  </div>
+</header>
+
+<div class="stage">
+  <div class="wrap" id="wrap">
+    <div class="phone" id="phone">
+      <div class="screen" id="screen">
+        <iframe id="frame" src="/" title="Aperçu du site"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="hint">
+  Le site est chargé dans un cadre à la largeur réelle de l’appareil : les points
+  de rupture, le menu et la barre d’achat se comportent comme sur un téléphone.
+  Adresse de cet aperçu : <code>http://localhost:4170/preview</code>
+</p>
+
+<script>
+(function () {
+  'use strict';
+
+  var DEVICES = [
+    { name: 'iPhone SE', w: 375, h: 667, flat: true },
+    { name: 'iPhone 13 mini', w: 375, h: 812 },
+    { name: 'iPhone 15', w: 393, h: 852 },
+    { name: 'iPhone 15 Pro Max', w: 430, h: 932 },
+    { name: 'Galaxy S24', w: 360, h: 780 },
+    { name: 'Pixel 8', w: 412, h: 915 },
+    { name: 'iPad mini', w: 744, h: 1133, flat: true },
+    { name: 'iPad Pro 11"', w: 834, h: 1194, flat: true }
+  ];
+
+  var FALLBACK_PAGES = [
+    ['/', 'Accueil'],
+    ['/collections/tout-nos-produits', 'Tous les soins'],
+    ['/collections/produits-pour-le-visage', 'Soins du visage'],
+    ['/collections/produit-pour-le-visage', 'Soins du corps'],
+    ['/products/creme-apaisante-s-o-s', 'Fiche produit'],
+    ['/pages/notre-histoire', 'Notre histoire'],
+    ['/pages/livraison-et-retours', 'Livraison et retours'],
+    ['/pages/contact', 'Contact'],
+    ['/pages/store-locator', 'Points de vente'],
+    ['/search', 'Recherche']
+  ];
+
+  var deviceSelect = document.getElementById('device');
+  var pageSelect = document.getElementById('page');
+  var screen = document.getElementById('screen');
+  var phone = document.getElementById('phone');
+  var wrap = document.getElementById('wrap');
+  var frame = document.getElementById('frame');
+  var sizeLabel = document.getElementById('size');
+  var openLink = document.getElementById('open');
+
+  var index = 2;
+  var landscape = false;
+  var fit = true;
+
+  DEVICES.forEach(function (device, i) {
+    var option = document.createElement('option');
+    option.value = i;
+    option.textContent = device.name + ' · ' + device.w + '×' + device.h;
+    deviceSelect.appendChild(option);
+  });
+  deviceSelect.value = index;
+
+  function addPages(entries) {
+    pageSelect.innerHTML = '';
+    entries.forEach(function (entry) {
+      var option = document.createElement('option');
+      option.value = entry[0];
+      option.textContent = entry[1];
+      pageSelect.appendChild(option);
+    });
+  }
+  addPages(FALLBACK_PAGES);
+
+  /* La liste des pages suit le sitemap généré par le build. */
+  fetch('/sitemap.xml').then(function (r) { return r.text(); }).then(function (xml) {
+    var urls = (xml.match(/<loc>([^<]+)<\/loc>/g) || []).map(function (m) {
+      return m.replace(/<\/?loc>/g, '').replace(/^https?:\/\/[^/]+/, '') || '/';
+    });
+    if (urls.length < 3) return;
+
+    function label(url) {
+      if (url === '/') return 'Accueil';
+      var parts = url.split('/').filter(Boolean);
+      var group = { collections: 'Collection', products: 'Produit', pages: 'Page', policies: 'Légal' }[parts[0]];
+      var name = (parts[1] || parts[0]).replace(/-/g, ' ');
+      return (group ? group + ' · ' : '') + name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    addPages(urls.map(function (url) { return [url, label(url)]; }));
+    pageSelect.value = frame.getAttribute('src');
+  }).catch(function () { /* on garde la liste de secours */ });
+
+  function apply() {
+    var device = DEVICES[index];
+    var w = landscape ? device.h : device.w;
+    var h = landscape ? device.w : device.h;
+
+    screen.style.width = w + 'px';
+    screen.style.height = h + 'px';
+    phone.classList.toggle('phone--flat', !!device.flat || landscape);
+    sizeLabel.textContent = w + ' × ' + h + ' px';
+    scale();
+  }
+
+  function scale() {
+    var device = DEVICES[index];
+    var flat = !!device.flat || landscape;
+    var pad = (flat ? 12 : 14) * 2;
+    var w = (landscape ? device.h : device.w) + pad;
+    var h = (landscape ? device.w : device.h) + pad;
+
+    if (!fit) {
+      wrap.style.transform = 'scale(1)';
+      wrap.style.height = h + 'px';
+      return;
+    }
+
+    /* La hauteur disponible se déduit de la fenêtre : le conteneur, lui,
+       s'agrandit avec son contenu et ne peut pas servir de référence. */
+    var barHeight = document.querySelector('.bar').getBoundingClientRect().height;
+    var hintHeight = document.querySelector('.hint').getBoundingClientRect().height;
+    var availableH = window.innerHeight - barHeight - hintHeight - 56;
+    var availableW = wrap.parentElement.clientWidth - 24;
+    var ratio = Math.min(1, availableH / h, availableW / w);
+    wrap.style.transform = 'scale(' + ratio + ')';
+    /* on réserve la hauteur réellement occupée après mise à l'échelle */
+    wrap.style.height = Math.ceil(h * ratio) + 'px';
+  }
+
+  deviceSelect.addEventListener('change', function () {
+    index = Number(deviceSelect.value);
+    apply();
+  });
+
+  pageSelect.addEventListener('change', function () {
+    frame.src = pageSelect.value;
+    openLink.href = pageSelect.value;
+  });
+
+  document.getElementById('rotate').addEventListener('click', function () {
+    landscape = !landscape;
+    this.classList.toggle('is-on', landscape);
+    apply();
+  });
+
+  document.getElementById('fit').addEventListener('click', function () {
+    fit = !fit;
+    this.classList.toggle('is-on', fit);
+    scale();
+  });
+
+  document.getElementById('reload').addEventListener('click', function () {
+    frame.src = frame.src;
+  });
+
+  window.addEventListener('resize', scale);
+
+  apply();
+})();
+</script>
+</body>
+</html>

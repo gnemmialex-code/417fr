@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Back-office — 417 France</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Tenor+Sans&display=swap">
+<link rel="stylesheet" href="/admin/assets/admin.css">
+</head>
+<body class="admin">
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar__brand">
+    <span class="sidebar__mark">417</span>
+    <span>
+      <strong>Back-office</strong>
+      <em id="shop-name">417 France</em>
+    </span>
+  </div>
+
+  <nav class="sidebar__nav">
+    <a href="#/tableau-de-bord" data-nav="tableau-de-bord">
+      <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg>
+      Tableau de bord
+    </a>
+    <a href="#/stock" data-nav="stock">
+      <svg viewBox="0 0 24 24"><path d="M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Zm0 2.2 6.5 3.3L12 10.8 5.5 7.5 12 4.2ZM5 9.2l6 3v7.3l-6-3V9.2Zm8 10.3v-7.3l6-3v7.3l-6 3Z"/></svg>
+      Gestion des stocks
+      <span class="badge" id="badge-stock" hidden>0</span>
+    </a>
+    <a href="#/commandes" data-nav="commandes">
+      <svg viewBox="0 0 24 24"><path d="M7 4h10l1 3H6l1-3Zm-2 5h14l-1.2 11H6.2L5 9Zm4 2v7h2v-7H9Zm4 0v7h2v-7h-2Z"/></svg>
+      Commandes
+      <span class="badge" id="badge-orders" hidden>0</span>
+    </a>
+    <a href="#/clients" data-nav="clients">
+      <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg>
+      Clients
+    </a>
+    <a href="#/livraisons" data-nav="livraisons">
+      <svg viewBox="0 0 24 24"><path d="M3 6h11v9H3V6Zm12 3h3.4l2.6 3v3h-6V9ZM6.5 20a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Zm11 0a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"/></svg>
+      Livraisons
+      <span class="badge" id="badge-ship" hidden>0</span>
+    </a>
+    <a href="#/contenu" data-nav="contenu">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4V4Zm0 6h9v10H4V10Zm11 0h5v4h-5v-4Zm0 6h5v4h-5v-4Z"/></svg>
+      Contenu du site
+    </a>
+    <a href="#/reglages" data-nav="reglages">
+      <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9 4-2.1-.6a7 7 0 0 0-.7-1.7l1-1.9-1.9-1.9-1.9 1a7 7 0 0 0-1.7-.7L13 4h-2l-.6 2.1a7 7 0 0 0-1.7.7l-1.9-1-1.9 1.9 1 1.9a7 7 0 0 0-.7 1.7L3 12v2l2.1.6c.2.6.4 1.2.7 1.7l-1 1.9 1.9 1.9 1.9-1c.5.3 1.1.5 1.7.7L11 22h2l.6-2.1c.6-.2 1.2-.4 1.7-.7l1.9 1 1.9-1.9-1-1.9c.3-.5.5-1.1.7-1.7L21 14v-2Z"/></svg>
+      Réglages
+    </a>
+  </nav>
+
+  <div class="sidebar__foot">
+    <a class="sidebar__link" href="/" target="_blank" rel="noopener">Voir la boutique ↗</a>
+    <a class="sidebar__link" href="/preview" target="_blank" rel="noopener">Aperçu mobile ↗</a>
+    <div class="sidebar__user">
+      <span id="user-name">admin</span>
+      <button type="button" id="logout">Déconnexion</button>
+    </div>
+  </div>
+</aside>
+
+<div class="shell">
+  <header class="topbar">
+    <button type="button" class="topbar__burger" id="burger" aria-label="Ouvrir le menu">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+    </button>
+    <div>
+      <h1 id="page-title">Tableau de bord</h1>
+      <p id="page-sub">Vue d’ensemble de l’activité</p>
+    </div>
+    <div class="topbar__actions" id="page-actions"></div>
+    <span class="publish-state" id="publish-state" hidden></span>
+    <button type="button" class="btn btn--sm" id="publish">Publier le site</button>
+  </header>
+
+  <main class="content" id="content"></main>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal__backdrop" data-close-modal></div>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal__head">
+      <h2 id="modal-title">Titre</h2>
+      <button type="button" class="icon-btn" data-close-modal aria-label="Fermer">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal__body" id="modal-body"></div>
+    <div class="modal__foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="/admin/assets/admin.js" defer></script>
+<script src="/admin/assets/content.js" defer></script>
+</body>
+</html>
