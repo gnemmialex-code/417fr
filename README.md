@@ -35,6 +35,31 @@ empreinte est stockée. Pour le changer :
 node scripts/reset-password.js <nouveau mot de passe>
 ```
 
+## Déploiement
+
+La boutique est un site statique : `npm run build` écrit tout dans `dist/`.
+
+```bash
+npm run build      # prépare la base si besoin, puis génère dist/
+```
+
+Sur Vercel, `vercel.json` déclare déjà la commande et le dossier de sortie.
+Comme `data/store.json` est exclu du dépôt, la base est recréée à chaque build
+à partir du catalogue et du contenu versionnés. Deux variables d'environnement
+sont utiles :
+
+| Variable | Effet |
+| --- | --- |
+| `SITE_URL` | Adresse publique utilisée pour les URL canoniques, Open Graph et le sitemap. À défaut, le domaine Vercel est repris. |
+| `ADMIN_PASSWORD` | Mot de passe du compte `admin` créé au build. Sans elle, un mot de passe aléatoire est généré et affiché dans le journal de build. |
+
+**Ce qui est déployé et ce qui ne l'est pas.** Vercel sert la boutique, pas le
+back-office. Celui-ci a besoin d'écrire dans `data/store.json` et de relancer la
+génération, ce qu'un hébergement statique ne permet pas : le système de fichiers
+y est en lecture seule. Le back-office reste donc local, sur
+`node server.js`. Les modifications faites en local sont reportées en ligne en
+poussant le dépôt, ce qui déclenche un nouveau build.
+
 ## Contenu généré
 
 | Type | Nombre | URL |
@@ -244,5 +269,6 @@ python scripts/fetch-images.py
 node build.js
 node scripts/check.js
 ```
-#   4 1 7 f r  
+#   4 1 7 f r 
+ 
  
