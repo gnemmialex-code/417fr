@@ -142,7 +142,7 @@
 <p class="hint">
   Le site est chargé dans un cadre à la largeur réelle de l’appareil : les points
   de rupture, le menu et la barre d’achat se comportent comme sur un téléphone.
-  Adresse de cet aperçu : <code>http://localhost:4170/preview</code>
+  Adresse de cet aperçu : <code id="self">/preview</code>
 </p>
 
 <script>
@@ -150,10 +150,12 @@
   'use strict';
 
   var DEVICES = [
-    { name: 'iPhone SE', w: 375, h: 667, flat: true },
-    { name: 'iPhone 13 mini', w: 375, h: 812 },
-    { name: 'iPhone 15', w: 393, h: 852 },
+    { name: 'iPhone 16 Pro Max', w: 440, h: 956 },
+    { name: 'iPhone 16 Pro', w: 402, h: 874 },
+    { name: 'iPhone 16', w: 393, h: 852 },
     { name: 'iPhone 15 Pro Max', w: 430, h: 932 },
+    { name: 'iPhone 13 mini', w: 375, h: 812 },
+    { name: 'iPhone SE', w: 375, h: 667, flat: true },
     { name: 'Galaxy S24', w: 360, h: 780 },
     { name: 'Pixel 8', w: 412, h: 915 },
     { name: 'iPad mini', w: 744, h: 1133, flat: true },
@@ -182,7 +184,7 @@
   var sizeLabel = document.getElementById('size');
   var openLink = document.getElementById('open');
 
-  var index = 2;
+  var index = 0;
   var landscape = false;
   var fit = true;
 
@@ -287,6 +289,8 @@
   });
 
   window.addEventListener('resize', scale);
+
+  document.getElementById('self').textContent = location.origin + location.pathname;
 
   apply();
 })();

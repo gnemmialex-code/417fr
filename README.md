@@ -24,9 +24,21 @@ npm start
 | Back-office | http://localhost:4170/admin |
 | Aperçu mobile | http://localhost:4170/preview |
 
+En ligne, les deux mêmes adresses :
+
+| | |
+| --- | --- |
+| Boutique | https://417fr-eta.vercel.app |
+| Aperçu mobile | https://417fr-eta.vercel.app/preview |
+
+L'accès en ligne demande une connexion au compte Vercel de l'équipe : la
+protection s'applique aux adresses en `.vercel.app`, un domaine personnalisé
+serait public. Le back-office n'est pas déployé, il reste local.
+
 L'aperçu mobile charge le site dans un cadre de téléphone à la largeur réelle de
-l'appareil choisi : huit modèles d'iPhone, Android et iPad, rotation paysage,
-mise à l'échelle automatique et sélecteur de page alimenté par le sitemap.
+l'appareil choisi, iPhone 16 Pro Max par défaut : dix modèles d'iPhone, Android
+et iPad, rotation paysage, mise à l'échelle automatique et sélecteur de page
+alimenté par le sitemap.
 
 L'initialisation affiche l'identifiant et un mot de passe aléatoire. Seule son
 empreinte est stockée. Pour le changer :
