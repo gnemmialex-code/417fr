@@ -145,13 +145,11 @@
     }
   ],
   "marquees": [
-    "Une peau propre, Un esprit clair",
+    "Une peau propre, un esprit clair",
     "La beauté libérée"
   ],
   "announcements": [
-    "Livraison offerte dès 100 € d’achat",
-    "Retour accepté sous 14 jours",
-    "Formules vegan aux minéraux de la mer Morte"
+    "Profitez de nos offres découvertes dès maintenant — Livraison offerte à partir de 100 € d’achat"
   ],
   "brandBlock": {
     "number": "417",
@@ -310,6 +308,14 @@
     "secondary": {
       "label": "Notre histoire",
       "url": "/pages/notre-histoire"
+    },
+    "phonePrimary": {
+      "label": "Soin du corps",
+      "url": "/collections/produit-pour-le-visage"
+    },
+    "phoneSecondary": {
+      "label": "Soin du visage",
+      "url": "/collections/produits-pour-le-visage"
     }
   },
   "categories": [
@@ -425,5 +431,172 @@
       "text": "Carte bancaire, Apple Pay et PayPal."
     }
   ],
-  "bestsellersLede": "Les soins que nos clientes et clients rachètent, saison après saison."
+  "bestsellersLede": "Les soins que nos clientes et clients rachètent, saison après saison.",
+  "productsStripTitle": "Nos meilleures ventes",
+  "reviews": [
+    {
+      "name": "Camille R.",
+      "city": "Paris",
+      "rating": 5,
+      "product": "Crème Apaisante S.O.S",
+      "text": "Ma peau réagit à tout. C’est le premier soin qui calme les rougeurs en une nuit sans me laisser un film gras.",
+      "demo": true
+    },
+    {
+      "name": "Julien M.",
+      "city": "Aix-en-Provence",
+      "rating": 5,
+      "product": "Gel Moussant Visage",
+      "text": "Les micro-grains de luffa nettoient sans agresser. J’ai arrêté mon ancien gel après deux utilisations.",
+      "demo": true
+    },
+    {
+      "name": "Sofia B.",
+      "city": "Lyon",
+      "rating": 4,
+      "product": "Masque de Boue Régénérant",
+      "text": "Le prix pique, mais le pot dure des mois et le teint après application est vraiment différent.",
+      "demo": true
+    },
+    {
+      "name": "Élodie G.",
+      "city": "Bordeaux",
+      "rating": 5,
+      "product": "Beurre Corporel Kiwi & Mangue",
+      "text": "Le parfum tient toute la journée sans être entêtant, et la peau reste souple même en hiver.",
+      "demo": true
+    },
+    {
+      "name": "Marc L.",
+      "city": "Bruxelles",
+      "rating": 5,
+      "product": "Crème Hydratante pour les Mains",
+      "text": "Je travaille dehors, mes mains gerçaient tout l’hiver. Plus rien depuis que j’en ai un tube dans la veste.",
+      "demo": true
+    },
+    {
+      "name": "Naïma T.",
+      "city": "Toulouse",
+      "rating": 4,
+      "product": "Sérum Hydratant Minéral Aqua",
+      "text": "Texture très légère, pénètre vite. Je l’utilise sous ma crème du matin, le maquillage tient mieux.",
+      "demo": true
+    },
+    {
+      "name": "Anaïs D.",
+      "city": "Nantes",
+      "rating": 5,
+      "product": "Masque de Boue Régénérant",
+      "text": "Vingt minutes une fois par semaine et les pores sont visiblement resserrés. Je n’y croyais pas avant d’essayer.",
+      "demo": true
+    },
+    {
+      "name": "Thomas V.",
+      "city": "Lille",
+      "rating": 4,
+      "product": "Masque Gommant aux Minéraux",
+      "text": "Le masque s’enlève d’un seul morceau, ce qui est assez satisfaisant. Il faut juste bien respecter l’épaisseur.",
+      "demo": true
+    },
+    {
+      "name": "Clara M.",
+      "city": "Strasbourg",
+      "rating": 5,
+      "product": "Crème Infusion Minérale Contour des Yeux",
+      "text": "La zone est beaucoup moins fripée au réveil. L’applicateur froid fait une vraie différence le matin.",
+      "demo": true
+    },
+    {
+      "name": "Inès K.",
+      "city": "Montpellier",
+      "rating": 3,
+      "product": "Lotion Visage Hydratante & Équilibrante",
+      "text": "Efficace sur les zones grasses, mais le flacon se vide vite quand on l’utilise matin et soir.",
+      "demo": true
+    },
+    {
+      "name": "Hugo P.",
+      "city": "Rennes",
+      "rating": 5,
+      "product": "Gel Moussant Visage aux Micro-Grains de Luffa",
+      "text": "Je l’utilise après le sport, la peau est nette sans tirer. Une noisette suffit largement.",
+      "demo": true
+    },
+    {
+      "name": "Laure B.",
+      "city": "Nice",
+      "rating": 4,
+      "product": "Eau Micellaire & Minérale",
+      "text": "Enlève le mascara sans frotter. Une étoile de moins parce que j’aurais aimé un format voyage.",
+      "demo": true
+    },
+    {
+      "name": "Mehdi A.",
+      "city": "Rouen",
+      "rating": 5,
+      "product": "Crème Hydratante pour les Mains – Ocean",
+      "text": "Absorbé en dix secondes, je peux reprendre le clavier tout de suite. J’en ai racheté trois.",
+      "demo": true
+    },
+    {
+      "name": "Océane F.",
+      "city": "Dijon",
+      "rating": 5,
+      "product": "Gommage Corporel Aromatique – Matcha",
+      "text": "Les grains sont fins, ça ne raye pas. La peau reste douce pendant plusieurs jours.",
+      "demo": true
+    },
+    {
+      "name": "Antoine R.",
+      "city": "Reims",
+      "rating": 4,
+      "product": "Beurre Corporel Aromatique – Ocean",
+      "text": "Texture riche, il faut le chauffer entre les mains. Une fois étalé, plus aucune sensation de gras.",
+      "demo": true
+    },
+    {
+      "name": "Farida S.",
+      "city": "Grenoble",
+      "rating": 5,
+      "product": "Crème Hydratante – Peau Normale à Sèche",
+      "text": "Ma peau desquamait en altitude, ce n’est plus le cas. Je l’utilise même sur les coudes.",
+      "demo": true
+    },
+    {
+      "name": "Lucie C.",
+      "city": "Angers",
+      "rating": 4,
+      "product": "Beurre Corporel Aromatique – Lait & Miel",
+      "text": "Le parfum est gourmand sans être écœurant. Le pot est grand, il tient tout l’hiver.",
+      "demo": true
+    },
+    {
+      "name": "Baptiste N.",
+      "city": "Tours",
+      "rating": 3,
+      "product": "Sérum Hydratant Minéral Aqua",
+      "text": "Bon produit, mais à ce prix j’attendais un effet plus visible sur les ridules du front.",
+      "demo": true
+    },
+    {
+      "name": "Salomé J.",
+      "city": "Metz",
+      "rating": 5,
+      "product": "Crème Apaisante S.O.S",
+      "text": "J’en garde un pot au bureau pour les plaques sèches. En deux jours la rougeur part.",
+      "demo": true
+    },
+    {
+      "name": "Victor E.",
+      "city": "Annecy",
+      "rating": 5,
+      "product": "Crème Hydratante pour les Mains – Matcha",
+      "text": "Le parfum vert est très frais et discret. Format parfait pour la poche de veste.",
+      "demo": true
+    }
+  ],
+  "band": {
+    "image": "/assets/img/860_mineral-aqua-perfection_infinite-motion_lifestyle2_result.webp",
+    "title": "417 La fréquence de la peau"
+  }
 }

@@ -574,6 +574,168 @@
 
   /* ---------- Vue : réglages ---------- */
 
+  /* ---------- Vue : codes de réduction ---------- */
+
+  function discountById(id) {
+    return (state.discounts || []).find(function (d) { return d.id === id; });
+  }
+
+  /* Ce que le code offre, en une ligne. */
+  function discountEffect(d) {
+    if (d.type === 'shipping') return 'Livraison offerte';
+    if (d.type === 'amount') return money(d.value) + ' de remise';
+    return d.value + ' % de remise';
+  }
+
+  /* Les conditions à remplir, les unes sous les autres. */
+  function discountRules(d) {
+    var rules = [d.auto ? 'Appliquée automatiquement' : 'Sur saisie du code'];
+    if (d.minSubtotal) rules.push('Panier de ' + money(d.minSubtotal) + ' minimum');
+    if (d.scope) rules.push('Gamme ' + d.scope + ' seulement');
+    if (d.startsAt) rules.push('À partir du ' + date(d.startsAt));
+    if (d.endsAt) rules.push('Jusqu’au ' + date(d.endsAt));
+    if (d.maxUses) rules.push(d.maxUses + ' utilisation' + (d.maxUses > 1 ? 's' : '') + ' au total');
+    return '<span class="cell-sub">' + rules.map(esc).join('<br>') + '</span>';
+  }
+
+  /* Un code peut être actif tout en étant hors période ou épuisé. */
+  function discountStatus(d) {
+    if (!d.active) return '<span class="tag tag--neutral">Inactif</span>';
+    var today = new Date().toISOString().slice(0, 10);
+    if (d.startsAt && today < d.startsAt) return '<span class="tag tag--info">Programmé</span>';
+    if (d.endsAt && today > d.endsAt) return '<span class="tag tag--danger">Expiré</span>';
+    if (d.maxUses && (d.used || 0) >= d.maxUses) return '<span class="tag tag--warn">Épuisé</span>';
+    return '<span class="tag tag--ok">En cours</span>';
+  }
+
+  function viewDiscounts() {
+    var list = (state.discounts || []).slice().sort(function (a, b) {
+      return String(a.code).localeCompare(String(b.code));
+    });
+
+    var rows = list.length ? list.map(function (d) {
+      return '<tr>'
+        + '<td><span class="cell-title">' + esc(d.code) + '</span><br>'
+        + '<span class="cell-sub">' + esc(d.label || '—') + '</span></td>'
+        + '<td>' + esc(discountEffect(d)) + '</td>'
+        + '<td>' + discountRules(d) + '</td>'
+        + '<td class="num">' + (d.used || 0) + (d.maxUses ? ' / ' + d.maxUses : '') + '</td>'
+        + '<td>' + discountStatus(d) + '</td>'
+        + '<td class="actions">'
+        + '<button type="button" class="btn btn--ghost btn--sm" data-discount-toggle="' + d.id + '">'
+        + (d.active ? 'Désactiver' : 'Activer') + '</button>'
+        + '<button type="button" class="btn btn--ghost btn--sm" data-discount-edit="' + d.id + '">Modifier</button>'
+        + '<button type="button" class="btn btn--ghost btn--sm" data-discount-delete="' + d.id + '">Supprimer</button>'
+        + '</td></tr>';
+    }).join('') : emptyRow(6, 'Aucun code de réduction', 'Créez un code pour lancer une offre.');
+
+    return '<div class="view"><section class="card">'
+      + '<div class="toolbar"><div class="toolbar__right">'
+      + '<button type="button" class="btn btn--ghost btn--sm" id="export-discounts">Exporter en CSV</button>'
+      + '<button type="button" class="btn btn--sm" id="discount-new">Nouveau code</button>'
+      + '</div></div>'
+      + '<div class="table-wrap"><table class="table"><thead><tr>'
+      + '<th>Code</th><th>Avantage</th><th>Conditions</th><th class="num">Utilisé</th>'
+      + '<th>État</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+      + '</section>'
+      + '<section class="card"><div class="card__head"><h2>Prise en compte au paiement</h2></div>'
+      + '<p class="card__sub">Les codes sont enregistrés et suivis ici. Pour qu’un client puisse '
+      + 'en saisir un, la boutique doit disposer d’une caisse en ligne : le bouton « Procéder au '
+      + 'paiement » ne fait encore rien. Les codes ne sont pas publiés dans les pages du site, '
+      + 'sinon n’importe quel visiteur pourrait lire ceux qui ne sont pas encore lancés.</p>'
+      + '</section></div>';
+  }
+
+  function discountForm(id) {
+    var d = id ? discountById(id) : null;
+
+    function options(pairs, current) {
+      return pairs.map(function (pair) {
+        return '<option value="' + esc(pair[0]) + '"'
+          + (String(current == null ? '' : current) === pair[0] ? ' selected' : '')
+          + '>' + esc(pair[1]) + '</option>';
+      }).join('');
+    }
+
+    var types = [['percent', 'Pourcentage sur le panier'], ['amount', 'Montant fixe en euros'],
+      ['shipping', 'Livraison offerte']];
+    var scopes = [['', 'Tout le catalogue'], ['Visage', 'Soins du visage'], ['Corps', 'Soins du corps']];
+
+    var body = '<form id="discount-form"><div class="grid-2">'
+      + '<div class="field"><label for="d-code">Code</label>'
+      + '<input id="d-code" name="code" value="' + esc(d ? d.code : '') + '" placeholder="BIENVENUE10" required></div>'
+      + '<div class="field"><label for="d-label">Intitulé interne</label>'
+      + '<input id="d-label" name="label" value="' + esc(d ? d.label : '') + '" placeholder="Offre de bienvenue"></div>'
+      + '<div class="field"><label for="d-type">Avantage</label>'
+      + '<select id="d-type" name="type">' + options(types, d ? d.type : 'percent') + '</select></div>'
+      + '<div class="field" data-value-field><label for="d-value">Valeur</label>'
+      + '<input id="d-value" name="value" type="number" min="0" step="0.01" value="' + esc(d ? d.value : 10) + '"></div>'
+      + '<div class="field"><label for="d-min">Panier minimum en euros</label>'
+      + '<input id="d-min" name="minSubtotal" type="number" min="0" step="1" value="' + esc(d ? d.minSubtotal : 0) + '"></div>'
+      + '<div class="field"><label for="d-scope">S’applique à</label>'
+      + '<select id="d-scope" name="scope">' + options(scopes, d ? d.scope : '') + '</select></div>'
+      + '<div class="field"><label for="d-starts">Début</label>'
+      + '<input id="d-starts" name="startsAt" type="date" value="' + esc(d ? d.startsAt : '') + '"></div>'
+      + '<div class="field"><label for="d-ends">Fin</label>'
+      + '<input id="d-ends" name="endsAt" type="date" value="' + esc(d ? d.endsAt : '') + '"></div>'
+      + '<div class="field"><label for="d-max">Utilisations, 0 pour illimité</label>'
+      + '<input id="d-max" name="maxUses" type="number" min="0" step="1" value="' + esc(d ? d.maxUses : 0) + '"></div>'
+      + '<div class="field"><label for="d-auto">Application</label>'
+      + '<select id="d-auto" name="auto">'
+      + '<option value="false"' + (d && d.auto ? '' : ' selected') + '>Sur saisie du code</option>'
+      + '<option value="true"' + (d && d.auto ? ' selected' : '') + '>Automatique, sans code</option>'
+      + '</select></div>'
+      + '<div class="field"><label for="d-active">État</label>'
+      + '<select id="d-active" name="active">'
+      + '<option value="true"' + (!d || d.active ? ' selected' : '') + '>Actif</option>'
+      + '<option value="false"' + (d && !d.active ? ' selected' : '') + '>Inactif</option>'
+      + '</select></div>'
+      + '</div><p class="field-hint" data-value-hint></p></form>';
+
+    openModal({
+      title: d ? 'Modifier le code' : 'Nouveau code de réduction',
+      body: body,
+      foot: '<button type="button" class="btn btn--ghost" data-close-modal>Annuler</button>'
+        + '<button type="submit" form="discount-form" class="btn">Enregistrer</button>',
+      onOpen: function () {
+        var type = $('#d-type');
+        var value = $('#d-value');
+        var hint = $('[data-value-hint]');
+
+        /* La valeur n'a pas de sens pour une livraison offerte. */
+        function syncType() {
+          var shipping = type.value === 'shipping';
+          value.disabled = shipping;
+          $('[data-value-field]').style.opacity = shipping ? '0.45' : '';
+          if (shipping) hint.textContent = 'La livraison est offerte dès que les conditions sont remplies.';
+          else if (type.value === 'percent') hint.textContent = 'Pourcentage retiré du panier, de 1 à 100.';
+          else hint.textContent = 'Montant en euros retiré du panier.';
+        }
+
+        type.addEventListener('change', syncType);
+        syncType();
+
+        $('#discount-form').addEventListener('submit', function (event) {
+          event.preventDefault();
+          var discount = d ? { id: d.id } : {};
+          $('#discount-form [name]').forEach(function (input) { discount[input.name] = input.value; });
+          send('discounts/save', { discount: discount }, 'Code enregistré.')
+            .then(closeModal).catch(function () {});
+        });
+      }
+    });
+  }
+
+  function exportDiscounts() {
+    var rows = [['Code', 'Intitule', 'Avantage', 'Panier minimum', 'Gamme',
+      'Debut', 'Fin', 'Utilisations', 'Maximum', 'Actif']];
+    (state.discounts || []).forEach(function (d) {
+      rows.push([d.code, d.label || '', discountEffect(d), d.minSubtotal || 0, d.scope || 'Tout',
+        d.startsAt || '', d.endsAt || '', d.used || 0, d.maxUses || 0, d.active ? 'oui' : 'non']);
+    });
+    download('417-codes-reduction.csv', rows);
+  }
+
   function viewSettings() {
     var s = state.settings;
     return '<div class="view">'
@@ -594,6 +756,7 @@
       + '</div>'
       + '<div class="grid-3">'
       + field('freeShippingThreshold', 'Livraison offerte dès (€)', s.freeShippingThreshold, 'number')
+      + field('shippingCost', 'Frais de livraison (€)', s.shippingCost, 'number')
       + field('lowStockAlert', 'Seuil d’alerte stock', s.lowStockAlert, 'number')
       + field('vatRate', 'Taux de TVA (%)', s.vatRate, 'number')
       + '</div>'
@@ -1071,6 +1234,7 @@
     commandes: { title: 'Commandes', sub: 'Suivi, statuts et bordereaux', view: viewOrders },
     clients: { title: 'Clients', sub: 'Fiches, coordonnées et historique d’achat', view: viewCustomers },
     livraisons: { title: 'Livraisons', sub: 'Transporteurs, numéros de suivi et étiquettes', view: viewShipments },
+    reductions: { title: 'Réductions', sub: 'Codes promotionnels, avantages et conditions', view: viewDiscounts },
     reglages: { title: 'Réglages', sub: 'Boutique, sécurité et données', view: viewSettings }
   };
 
@@ -1113,6 +1277,9 @@
     setBadge('#badge-stock', state.stats.lowStock + state.stats.outOfStock);
     setBadge('#badge-orders', state.stats.toPrepare);
     setBadge('#badge-ship', state.stats.inTransit);
+    setBadge('#badge-discounts', (state.discounts || []).filter(function (d) {
+      return d.active;
+    }).length);
 
     content.innerHTML = page.view();
     $('#page-actions').innerHTML = pageActions(key);
@@ -1130,6 +1297,7 @@
     if (key === 'commandes') return '<button type="button" class="btn btn--sm" data-action="order-new">Nouvelle commande</button>';
     if (key === 'clients') return '<button type="button" class="btn btn--sm" data-action="customer-new">Nouveau client</button>';
     if (key === 'livraisons') return '<button type="button" class="btn btn--sm" data-action="ship-new">Nouvelle expédition</button>';
+    if (key === 'reductions') return '<button type="button" class="btn btn--sm" data-action="discount-new">Nouveau code</button>';
     return '';
   }
 
@@ -1257,7 +1425,26 @@
       });
     });
 
+    /* Codes de réduction */
+    $('[data-discount-edit]').forEach(function (b) {
+      b.addEventListener('click', function () { discountForm(b.getAttribute('data-discount-edit')); });
+    });
+    $('[data-discount-toggle]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        send('discounts/toggle', { id: b.getAttribute('data-discount-toggle') }, 'Code mis à jour.');
+      });
+    });
+    $('[data-discount-delete]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var discount = discountById(b.getAttribute('data-discount-delete'));
+        confirmAction('Supprimer le code ' + discount.code + ' ?', 'Supprimer', function () {
+          send('discounts/delete', { id: discount.id }, 'Code supprimé.');
+        });
+      });
+    });
+
     /* Boutons de création */
+    bindCreate('#discount-new', discountForm);
     bindCreate('#product-new', productForm);
     bindCreate('#order-new', orderForm);
     bindCreate('#customer-new', customerForm);
@@ -1267,6 +1454,7 @@
     bindClick('#export-stock', exportStock);
     bindClick('#export-orders', exportOrders);
     bindClick('#export-customers', exportCustomers);
+    bindClick('#export-discounts', exportDiscounts);
     bindClick('#export-shipments', exportShipments);
 
     if (key === 'reglages') bindSettings();
@@ -1366,7 +1554,8 @@
     if (!action) return;
     var map = {
       'product-new': productForm, 'order-new': orderForm,
-      'customer-new': customerForm, 'ship-new': shipmentForm
+      'customer-new': customerForm, 'ship-new': shipmentForm,
+      'discount-new': discountForm
     };
     var fn = map[action.getAttribute('data-action')];
     if (fn) fn();

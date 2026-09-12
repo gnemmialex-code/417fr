@@ -185,6 +185,48 @@ function pickFilled(handles, count, exclude) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Codes de réduction                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** Empreinte d'un code. Le même calcul tourne dans le navigateur : la page
+    ne transporte que l'empreinte, jamais le code en clair, pour qu'un
+    visiteur ne puisse pas lire la liste des codes dans le source. Ce n'est
+    pas un secret cryptographique, seulement de quoi éviter cette lecture. */
+function codeHash(code) {
+  let hash = 5381;
+  const value = String(code).toUpperCase();
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36);
+}
+
+/* Seuls les codes utilisables aujourd'hui partent dans les pages : ni les
+   codes programmés plus tard, ni les expirés, ni ceux déjà épuisés. */
+const TODAY = new Date().toISOString().slice(0, 10);
+
+const liveDiscounts = (store.discounts || []).filter((d) => {
+  if (!d || !d.active) return false;
+  if (d.startsAt && TODAY < d.startsAt) return false;
+  if (d.endsAt && TODAY > d.endsAt) return false;
+  if (d.maxUses && (d.used || 0) >= d.maxUses) return false;
+  return true;
+}).map((d) => {
+  const payload = {
+    auto: !!d.auto,
+    type: d.type,
+    value: Number(d.value) || 0,
+    min: Number(d.minSubtotal) || 0,
+    scope: d.scope || ''
+  };
+  /* Un code saisi voyage sous forme d'empreinte ; une réduction automatique
+     n'a pas de code, mais son intitulé s'affiche dans le panier. */
+  if (d.auto) payload.label = d.label || '';
+  else payload.h = codeHash(d.code);
+  return payload;
+});
+
+/* -------------------------------------------------------------------------- */
 /* Icônes                                                                      */
 /* -------------------------------------------------------------------------- */
 
@@ -236,8 +278,10 @@ function productCard(product, index = 0) {
     ? `<button type="button" class="card__add" data-add-to-cart="${product.handle}" aria-label="Ajouter ${escapeHtml(product.title)} au panier">${icons.plus}</button>`
     : '';
 
+  const multi = product.hoverImage && product.hoverImage !== product.image ? ' data-multi' : '';
+
   return `<article class="card" data-card data-position="${index}" data-price="${product.price}" data-title="${escapeHtml(product.title)}" data-available="${product.available}"${reveal(index)}>
-  <div class="card__top">
+  <div class="card__top"${multi}>
     <a class="card__media" href="/products/${product.handle}" aria-label="${escapeHtml(product.title)}">
       ${badge}
       <img class="is-main img-fade" src="${product.image}" alt="${escapeHtml(product.title)}" loading="lazy" width="600" height="750">
@@ -271,10 +315,19 @@ function header(currentPath) {
     .map((text, i) => `<span class="announce__item${i === 0 ? ' is-active' : ''}" data-announce-item>${escapeHtml(text)}</span>`)
     .join('\n      ');
 
+  /* Sur telephone le bandeau devient un ruban qui defile sans jamais s'arreter.
+     La version en fondu reste en place pour les grands ecrans. */
+  const tickerItems = site.announcements
+    .map((text) => `<span class="ticker__item">${escapeHtml(text)}</span>`)
+    .join('');
+
   return `<header class="header">
   <div class="announce" aria-live="off">
     <div class="container announce__inner">
       ${announcements}
+    </div>
+    <div class="ticker" data-strip data-strip-speed="40" aria-hidden="true">
+      <div class="ticker__track" data-strip-track>${tickerItems}${tickerItems}${tickerItems}${tickerItems}</div>
     </div>
   </div>
   <div class="container header__inner">
@@ -352,6 +405,13 @@ function drawers() {
   <div class="drawer__foot" data-cart-foot hidden>
     <div class="cart-progress" data-cart-progress><i></i></div>
     <p class="cart-note" data-cart-shipping></p>
+    <form class="cart-code" data-cart-code>
+      <label class="visually-hidden" for="cart-code-input">Code de réduction</label>
+      <input id="cart-code-input" type="text" placeholder="Code de réduction" autocomplete="off" spellcheck="false" data-cart-code-input>
+      <button type="submit" class="btn btn--outline btn--sm" data-cart-code-apply>Appliquer</button>
+    </form>
+    <p class="cart-note" data-cart-code-note></p>
+    <div class="cart-sums" data-cart-sums></div>
     <div class="cart-total"><span>Total</span><strong data-cart-total>€0,00</strong></div>
     <button type="button" class="btn btn--block">Procéder au paiement</button>
     <p class="cart-note">Taxes incluses. Frais d’expédition calculés à l’étape suivante.</p>
@@ -397,6 +457,15 @@ function newsletter() {
 </section>`;
 }
 
+/** Colonne de pied de page. Ouverte par defaut : sur telephone le script la
+    replie pour raccourcir le pied de page, et sans script rien n'est cache. */
+function footerGroup(title, items) {
+  return `<details class="fgroup" open>
+        <summary><h4>${escapeHtml(title)}</h4><span class="fgroup__sign" aria-hidden="true"></span></summary>
+        <ul>${items}</ul>
+      </details>`;
+}
+
 function footer() {
   const shop = site.menu.map((i) => `<li><a href="${safeUrl(i.url)}">${escapeHtml(i.label)}</a></li>`).join('');
   const help = [
@@ -414,14 +483,14 @@ function footer() {
       <p>${escapeHtml(settings.city ? settings.address + ', ' + settings.zip + ' ' + settings.city : site.store.address)}</p>
     </div>
     <nav class="footer__cols" aria-label="Liens de pied de page">
-      <div><h4>Boutique</h4><ul>${shop}</ul></div>
-      <div><h4>Aide</h4><ul>${help}</ul></div>
-      <div><h4>Légal</h4><ul>${policies}</ul></div>
+      ${footerGroup('Boutique', shop)}
+      ${footerGroup('Aide', help)}
+      ${footerGroup('Légal', policies)}
     </nav>
   </div>
   <div class="container footer__bottom">
     <span>&copy; ${new Date().getFullYear()} ${escapeHtml(site.name)}</span>
-    <span>Une peau propre, un esprit clair</span>
+    <span class="footer__tagline">Une peau propre, un esprit clair</span>
   </div>
 </footer>`;
 }
@@ -434,7 +503,7 @@ function layout(options) {
   } = options;
 
   const catalogJson = JSON.stringify(products.map((p) => ({
-    handle: p.handle, title: p.title, price: p.price,
+    handle: p.handle, title: p.title, price: p.price, category: p.category,
     available: p.available, image: p.image, excerpt: p.excerpt
   })));
 
@@ -470,7 +539,10 @@ ${body}
 ${newsletter()}
 ${footer()}
 ${drawers()}
-<script>window.SITE_PRODUCTS = ${catalogJson};window.SITE_CONFIG = ${JSON.stringify({ freeShippingThreshold: settings.freeShippingThreshold || site.freeShippingThreshold })};</script>
+<script>window.SITE_PRODUCTS = ${catalogJson};window.SITE_CONFIG = ${JSON.stringify({
+  freeShippingThreshold: settings.freeShippingThreshold || site.freeShippingThreshold,
+  shippingCost: settings.shippingCost === undefined ? 5.9 : Number(settings.shippingCost)
+})};window.SITE_DISCOUNTS = ${JSON.stringify(liveDiscounts)};</script>
 <script src="/assets/js/app.js?v=${JS_VERSION}" defer></script>
 </body>
 </html>
@@ -487,7 +559,7 @@ function breadcrumb(items) {
 }
 
 function reassurance() {
-  const items = site.reassurance.map((item) => `<div class="reassure__item">
+  const items = site.reassurance.map((item, i) => `<div class="reassure__item" data-r="${i}">
         <strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text)}</span>
       </div>`).join('\n      ');
   return `<section class="reassure" aria-label="Nos garanties">
@@ -508,6 +580,17 @@ function videoCard(video, index) {
         <span class="vcard__media">${media}<span class="vcard__play">${icons.play}</span></span>
         <span class="vcard__label">${escapeHtml(video.label)}</span>
       </a>`;
+}
+
+/** index a null : pas d'apparition au defilement, la carte est visible tout
+    de suite. C'est ce qu'il faut dans un ruban qui defile en continu. */
+function reviewCard(review, index) {
+  const anim = index === null ? '' : reveal(index);
+  return `<article class="review"${anim}>
+        ${stars(review.rating)}
+        <p class="review__text">« ${escapeHtml(review.text)} »</p>
+        <p class="review__meta"><strong>${escapeHtml(review.name)}</strong>${review.city ? ' · ' + escapeHtml(review.city) : ''}<br><span>${escapeHtml(review.product)}</span></p>
+      </article>`;
 }
 
 function stars(rating) {
@@ -545,11 +628,16 @@ function homePage() {
 
   const videos = site.videos.map(videoCard).join('\n      ');
 
-  const reviews = site.reviews.map((r, i) => `<article class="review"${reveal(i)}>
-        ${stars(r.rating)}
-        <p class="review__text">« ${escapeHtml(r.text)} »</p>
-        <p class="review__meta"><strong>${escapeHtml(r.name)}</strong>${r.city ? ' · ' + escapeHtml(r.city) : ''}<br><span>${escapeHtml(r.product)}</span></p>
-      </article>`);
+  const reviews = site.reviews.map((r, i) => reviewCard(r, i));
+  const reviewRibbon = site.reviews.map((r) => reviewCard(r, null)).join('\n        ');
+
+  /* Diaporama telephone : un soin a la fois, sans prix. */
+  const productSlides = products.map((p, i) => `<a class="pslide${i === 0 ? ' is-active' : ''}" href="/products/${p.handle}" data-pshow-slide>
+          <span class="pslide__media"><img src="${p.image}" alt="" loading="lazy" width="900" height="900"></span>
+          <span class="pslide__name">${escapeHtml(p.title)}</span>
+        </a>`).join('\n        ');
+
+  const productDots = products.map((p, i) => `<button type="button" class="pshow__dot${i === 0 ? ' is-active' : ''}" data-pshow-dot="${i}" aria-label="Voir ${escapeHtml(p.title)}"></button>`).join('');
 
   const facts = site.facts.map((f, i) => `<div class="fact"${reveal(i)}>
         <p class="fact__value" data-count>${escapeHtml(f.value)}</p>
@@ -569,6 +657,11 @@ function homePage() {
 
   const press = site.press.map((p, i) => `<img class="img-fade" src="${p.image}" alt="${escapeHtml(p.name)}" loading="lazy" width="240" height="120"${reveal(i, 'fade')}>`).join('\n      ');
 
+  /* Meme liste, sans apparition au defilement : elle tourne en boucle. */
+  const pressRibbon = site.press
+    .map((p) => `<img class="img-fade" src="${p.image}" alt="${escapeHtml(p.name)}" loading="lazy" width="240" height="120">`)
+    .join('');
+
   const tags = site.commitments.map((t, i) => `<span class="tag"${reveal(i, 'fade')}>${escapeHtml(t)}</span>`).join('\n      ');
 
   const marqueeItems = (text) => Array.from({ length: 10 }, () => `<span>${escapeHtml(text)}</span>`).join('');
@@ -581,9 +674,20 @@ function homePage() {
     : `<img class="img-fade" src="${escapeHtml(feature.poster)}" alt="${escapeHtml(feature.title)}" loading="lazy" width="1600" height="900">
        <span class="feature__play">${icons.play}</span>`;
 
+  /* Plusieurs visuels : le hero les fait defiler. Un seul : rien ne bouge. */
+  const heroSlides = (Array.isArray(hero.images) && hero.images.length ? hero.images : [
+    hero.image,
+    ...site.categories.map((c) => c.image),
+    site.storyTeaser.image
+  ]).filter(Boolean).filter((src, i, all) => all.indexOf(src) === i).slice(0, 5);
+
+  const heroMedia = heroSlides
+    .map((src, i) => `<img class="hero__slide${i === 0 ? ' is-active' : ''}" src="${src}" alt=""${i === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} width="1800" height="1200">`)
+    .join('\n    ');
+
   const body = `<section class="hero is-lit" data-hero aria-label="Mise en avant">
-  <div class="hero__media" data-hero-media>
-    <img src="${hero.image}" alt="" fetchpriority="high" width="1800" height="1200">
+  <div class="hero__media" data-hero-media${heroSlides.length > 1 ? ' data-hero-slides' : ''}>
+    ${heroMedia}
   </div>
   <div class="hero__inner">
     <div class="container">
@@ -597,14 +701,40 @@ function homePage() {
         <a class="btn btn--light" href="${safeUrl(hero.primary.url)}">${escapeHtml(hero.primary.label)}</a>
         <a class="btn btn--light btn--clear" href="${safeUrl(hero.secondary.url)}">${escapeHtml(hero.secondary.label)}</a>
       </p>
+      <p class="hero__cta hero__cta--phone">
+        <a class="btn btn--light" href="${safeUrl(hero.phonePrimary.url)}">${escapeHtml(hero.phonePrimary.label)}</a>
+        <a class="btn btn--light btn--clear" href="${safeUrl(hero.phoneSecondary.url)}">${escapeHtml(hero.phoneSecondary.label)}</a>
+      </p>
     </div>
   </div>
+  <div class="hero__fade" aria-hidden="true"></div>
   <div class="hero__scroll"><span>Faire défiler</span><i></i></div>
 </section>
 
 ${reassurance()}
 
-<section class="section section--sm" aria-labelledby="cats-title">
+<section class="section section--sm section--strip" aria-labelledby="topsell-title">
+  <div class="container">
+    <div class="head head--center"${reveal(0, 'fade')}>
+      <h2 class="title title--md" id="topsell-title">${escapeHtml(site.productsStripTitle || 'Nos meilleures ventes')}</h2>
+    </div>
+  </div>
+  <div class="pshow" data-pshow data-pshow-interval="2500">
+    <div class="pshow__track" data-pshow-track>
+        ${productSlides}
+    </div>
+    <div class="pshow__dots">${productDots}</div>
+  </div>
+</section>
+
+<section class="section section--sm section--band" aria-labelledby="band-title">
+  <div class="band"${reveal(0, 'scale')}>
+    <img class="img-fade" src="${site.band.image}" alt="" loading="lazy" width="1200" height="1000">
+    <h2 class="band__title" id="band-title">${escapeHtml(site.band.title)}</h2>
+  </div>
+</section>
+
+<section class="section section--sm section--cats" aria-labelledby="cats-title">
   <div class="container">
     <div class="head head--center"${reveal(0, 'fade')}>
       <p class="eyebrow">Par besoin</p>
@@ -616,7 +746,7 @@ ${reassurance()}
   </div>
 </section>
 
-${bestProducts.length ? `<section class="section section--sm section--bone2" aria-labelledby="best-title">
+${bestProducts.length ? `<section class="section section--sm section--best section--bone2" aria-labelledby="best-title">
   <div class="container">
     <div class="head"${reveal(0, 'fade')}>
       <div class="head__row">
@@ -632,7 +762,7 @@ ${bestProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>` : ''}
 
-<section class="section section--sm about" aria-labelledby="about-title">
+<section class="section section--sm section--about about" aria-labelledby="about-title">
   <div class="container about__grid">
     <div${reveal(0)}>
       <p class="eyebrow">${escapeHtml(site.about.eyebrow)}</p>
@@ -646,7 +776,7 @@ ${bestProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>
 
-<section class="section section--sm" aria-labelledby="videos-title">
+<section class="section section--sm section--videos" aria-labelledby="videos-title">
   <div class="container">
     <div class="head"${reveal(0, 'fade')}>
       <div class="head__row">
@@ -666,7 +796,7 @@ ${bestProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>
 
-${moreProducts.length ? `<section class="section section--sm section--bone2" aria-labelledby="more-title">
+${moreProducts.length ? `<section class="section section--sm section--more section--bone2" aria-labelledby="more-title">
   <div class="container">
     <div class="head"${reveal(0, 'fade')}>
       <div class="head__row">
@@ -684,7 +814,7 @@ ${moreProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>` : ''}
 
-<section class="section section--sm" aria-labelledby="story-title">
+<section class="section section--sm section--story" aria-labelledby="story-title">
   <div class="container story">
     <div class="story__media"${reveal(0, 'scale')}>
       <img class="img-fade" src="${story.image}" alt="La mer Morte" loading="lazy" width="900" height="1125">
@@ -698,7 +828,7 @@ ${moreProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>
 
-<section class="section section--sm section--ink" aria-label="Nos repères">
+<section class="section section--sm section--facts section--ink" aria-label="Nos repères">
   <div class="container">
     <div class="facts">
       ${facts}
@@ -706,7 +836,7 @@ ${moreProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>
 
-<section class="section section--sm" aria-labelledby="feature-title">
+<section class="section section--sm section--feature" aria-labelledby="feature-title">
   <div class="container">
     <div class="feature"${reveal(0, 'scale')}>
       <div class="feature__media" data-feature>
@@ -735,7 +865,7 @@ ${moreProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>
 
-<section class="section section--sm section--bone2" aria-labelledby="reviews-title">
+<section class="section section--sm section--reviews section--bone2" aria-labelledby="reviews-title">
   <div class="container">
     <div class="head"${reveal(0, 'fade')}>
       <div class="head__row">
@@ -749,11 +879,20 @@ ${moreProducts.length ? `<section class="section section--sm section--bone2" ari
     </div>
     ${carousel('reviews-carousel', reviews)}
   </div>
+  <div class="rstrip" data-strip data-strip-speed="8">
+    <div class="rstrip__track" data-strip-track>
+        ${reviewRibbon}
+        ${reviewRibbon}
+    </div>
+  </div>
 </section>
 
-<div class="marquee marquee--ink" aria-hidden="true"><div class="marquee__track">${marqueeItems(site.marquees[0])}${marqueeItems(site.marquees[0])}</div></div>
+<div class="marquee marquee--ink marquee--dual" aria-hidden="true">
+  <div class="marquee__track">${marqueeItems(site.marquees[0])}${marqueeItems(site.marquees[0])}</div>
+  <div class="marquee__track">${marqueeItems(site.marquees[1])}${marqueeItems(site.marquees[1])}</div>
+</div>
 
-<section class="section section--sm" aria-labelledby="press-title">
+<section class="section section--sm section--press" aria-labelledby="press-title">
   <div class="container">
     <div class="head head--center"${reveal(0, 'fade')}>
       <h2 class="title title--md" id="press-title">${escapeHtml(site.pressTitle)}</h2>
@@ -762,9 +901,12 @@ ${moreProducts.length ? `<section class="section section--sm section--bone2" ari
       ${press}
     </div>
   </div>
+  <div class="press-strip" data-strip data-strip-speed="58">
+    <div class="press-strip__track" data-strip-track>${pressRibbon}${pressRibbon}</div>
+  </div>
 </section>
 
-<section class="section section--sm section--bone2" aria-labelledby="shop-title">
+<section class="section section--sm section--shop section--bone2" aria-labelledby="shop-title">
   <div class="container shop">
     <div class="shop__media"${reveal(0, 'scale')}>
       <img class="img-fade" src="${site.store.image}" alt="${escapeHtml(site.store.name)}" loading="lazy" width="900" height="675">
@@ -778,7 +920,7 @@ ${moreProducts.length ? `<section class="section section--sm section--bone2" ari
   </div>
 </section>
 
-<section class="section section--sm" aria-label="Nos engagements">
+<section class="section section--sm section--tags" aria-label="Nos engagements">
   <div class="container">
     <div class="tags">
       ${tags}
@@ -1217,10 +1359,12 @@ function build() {
 
   write('404.html', notFoundPage());
   write('sitemap.xml', buildSitemap(urls));
-  write('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+  write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /preview\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 
   copyDir(path.join(SRC, 'assets'), path.join(DIST, 'assets'));
   copyDir(path.join(SRC, 'media'), path.join(DIST, 'media'));
+  /* Aperçu mobile : la même page qu'en local, publiée avec le site. */
+  copyDir(path.join(SRC, 'preview'), path.join(DIST, 'preview'));
 
   console.log('Site généré dans /dist');
   console.log(`  ${products.length} produits, ${collections.length} collections, ${urls.length} URL`);

@@ -158,6 +158,93 @@ const VIDEO_SOURCES = [
   ['beurre-corporel-aromatique-lait-miel', 1, 'Lait & Miel']
 ];
 
+/* Un choix de reductions prêtes à l'emploi. Seule la livraison offerte dès
+   100 € est active : les autres attendent d'être basculées depuis la
+   rubrique « Réductions » du back-office. */
+const DISCOUNT_SEEDS = [
+  {
+    "code": "LIVRAISON100",
+    "label": "Livraison offerte dès 100 € d’achat",
+    "type": "shipping",
+    "value": 0,
+    "minSubtotal": 100,
+    "scope": "",
+    "auto": true,
+    "active": true
+  },
+  {
+    "code": "PORTOFFERT",
+    "label": "Livraison offerte, sans minimum",
+    "type": "shipping",
+    "value": 0,
+    "minSubtotal": 0,
+    "scope": "",
+    "auto": false,
+    "active": false
+  },
+  {
+    "code": "BIENVENUE10",
+    "label": "Bienvenue : 10 % sur tout le catalogue",
+    "type": "percent",
+    "value": 10,
+    "minSubtotal": 0,
+    "scope": "",
+    "auto": false,
+    "active": false
+  },
+  {
+    "code": "VISAGE15",
+    "label": "15 % sur les soins du visage",
+    "type": "percent",
+    "value": 15,
+    "minSubtotal": 0,
+    "scope": "Visage",
+    "auto": false,
+    "active": false
+  },
+  {
+    "code": "CORPS15",
+    "label": "15 % sur les soins du corps",
+    "type": "percent",
+    "value": 15,
+    "minSubtotal": 0,
+    "scope": "Corps",
+    "auto": false,
+    "active": false
+  },
+  {
+    "code": "MOINS20",
+    "label": "20 € de remise dès 150 € d’achat",
+    "type": "amount",
+    "value": 20,
+    "minSubtotal": 150,
+    "scope": "",
+    "auto": false,
+    "active": false
+  },
+  {
+    "code": "RITUEL25",
+    "label": "25 % dès 200 € d’achat",
+    "type": "percent",
+    "value": 25,
+    "minSubtotal": 200,
+    "scope": "",
+    "auto": false,
+    "active": false
+  }
+];
+
+function seededDiscounts() {
+  return DISCOUNT_SEEDS.map((seed) => Object.assign({
+    id: store.id('red'),
+    maxUses: 0,
+    startsAt: '',
+    endsAt: '',
+    used: 0,
+    createdAt: new Date().toISOString()
+  }, seed));
+}
+
 const content = {
   menu: site.menu,
   announcements: site.announcements,
@@ -170,6 +257,9 @@ const content = {
   bestsellersTitle: site.bestsellersTitle,
   bestsellersLede: site.bestsellersLede,
   bestsellers: site.moment,
+
+  productsStripTitle: site.productsStripTitle,
+  band: site.band,
 
   newTitle: 'Le reste de la gamme',
   newLede: 'Sérums, lotions, masques et gommages : la collection complète.',
@@ -215,14 +305,7 @@ const content = {
 
   reviewsTitle: 'Ce qu’en disent nos clientes',
   reviewsLede: 'Avis publiés après achat vérifié.',
-  reviews: [
-    { name: 'Camille R.', city: 'Paris', rating: 5, product: 'Crème Apaisante S.O.S', text: 'Ma peau réagit à tout. C’est le premier soin qui calme les rougeurs en une nuit sans me laisser un film gras.', demo: true },
-    { name: 'Julien M.', city: 'Aix-en-Provence', rating: 5, product: 'Gel Moussant Visage', text: 'Les micro-grains de luffa nettoient sans agresser. J’ai arrêté mon ancien gel après deux utilisations.', demo: true },
-    { name: 'Sofia B.', city: 'Lyon', rating: 4, product: 'Masque de Boue Régénérant', text: 'Le prix pique, mais le pot dure des mois et le teint après application est vraiment différent.', demo: true },
-    { name: 'Élodie G.', city: 'Bordeaux', rating: 5, product: 'Beurre Corporel Kiwi & Mangue', text: 'Le parfum tient toute la journée sans être entêtant, et la peau reste souple même en hiver.', demo: true },
-    { name: 'Marc L.', city: 'Bruxelles', rating: 5, product: 'Crème Hydratante pour les Mains', text: 'Je travaille dehors, mes mains gerçaient tout l’hiver. Plus rien depuis que j’en ai un tube dans la veste.', demo: true },
-    { name: 'Naïma T.', city: 'Toulouse', rating: 4, product: 'Sérum Hydratant Minéral Aqua', text: 'Texture très légère, pénètre vite. Je l’utilise sous ma crème du matin, le maquillage tient mieux.', demo: true }
-  ],
+  reviews: site.reviews,
 
   ritualTitle: site.ritualTitle,
   ritualSub: site.ritualSub,
@@ -304,6 +387,11 @@ const result = store.update((data) => {
   else Object.keys(content).forEach((key) => {
     if (data.content[key] === undefined) data.content[key] = content[key];
   });
+
+  /* La liste des codes existe toujours. Les codes fournis sont ajoutés une
+     seule fois : un code supprimé dans le back-office ne revient pas. */
+  if (!data.discounts) data.discounts = [];
+  if (!data.discounts.length) data.discounts = seededDiscounts();
 
   store.log(data, 'Contenu du site importé', enriched + ' produits enrichis');
   return { enriched };

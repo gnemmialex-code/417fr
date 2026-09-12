@@ -6,13 +6,19 @@
   'use strict';
 
   var CART_KEY = '417france.cart';
+  var CODE_KEY = '417france.code';
   var REGION_KEY = '417france.region';
   var ANNOUNCE_INTERVAL = 4200;
+  var HERO_INTERVAL = 5200;
+  var GALLERY_INTERVAL = 4200;
+  var SLIDE_LEAVE = 900;
+  var PHONE = '(max-width: 720px)';
   var SCROLL_EASE = 0.135;
   var PARALLAX = 0.08;
 
   var catalog = window.SITE_PRODUCTS || [];
   var config = window.SITE_CONFIG || { freeShippingThreshold: 100 };
+  var discounts = window.SITE_DISCOUNTS || [];
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- Utilitaires ---------- */
@@ -355,6 +361,122 @@
     renderCart();
   }
 
+  /* ---------- Codes de réduction ---------- */
+
+  /* Code saisi par le visiteur, conservé d'une visite à l'autre. */
+  var appliedCode = String(readJson(CODE_KEY, '') || '').toUpperCase();
+
+  /* Même calcul que dans le générateur : les pages ne transportent que
+     l'empreinte des codes, jamais les codes eux-mêmes. */
+  function codeHash(code) {
+    var hash = 5381;
+    var value = String(code).toUpperCase();
+    for (var i = 0; i < value.length; i += 1) {
+      hash = ((hash * 33) ^ value.charCodeAt(i)) >>> 0;
+    }
+    return hash.toString(36);
+  }
+
+  function findByCode(code) {
+    if (!code) return null;
+    var hash = codeHash(code);
+    for (var i = 0; i < discounts.length; i += 1) {
+      if (!discounts[i].auto && discounts[i].h === hash) return discounts[i];
+    }
+    return null;
+  }
+
+  /* Total des articles qu'une réduction peut toucher : tout le panier, ou
+     seulement une gamme. */
+  function scopedTotal(scope) {
+    return cart.reduce(function (sum, line) {
+      var product = productByHandle(line.handle);
+      if (!product) return sum;
+      if (scope && product.category !== scope) return sum;
+      return sum + product.price * line.quantity;
+    }, 0);
+  }
+
+  function discountLabel(d) {
+    if (d.label) return d.label;
+    if (d.type === 'shipping') return 'Livraison offerte';
+    if (d.type === 'amount') return 'Remise de ' + money(d.value);
+    return 'Remise de ' + d.value + ' %';
+  }
+
+  /** Réductions retenues : celles qui s'appliquent d'office, plus le code
+      saisi lorsqu'il remplit ses conditions. */
+  function chosenDiscounts() {
+    var subtotal = cartTotal();
+    var kept = [];
+
+    discounts.forEach(function (d) {
+      var manual = !d.auto && appliedCode && d.h === codeHash(appliedCode);
+      if (!d.auto && !manual) return;
+      if (subtotal < (d.min || 0)) return;
+
+      var base = scopedTotal(d.scope);
+      if (base <= 0) return;
+
+      var amount = 0;
+      if (d.type === 'percent') amount = base * (Number(d.value) || 0) / 100;
+      else if (d.type === 'amount') amount = Math.min(Number(d.value) || 0, base);
+
+      kept.push({
+        shipping: d.type === 'shipping',
+        amount: Math.round(amount * 100) / 100,
+        label: discountLabel(d)
+      });
+    });
+
+    return kept;
+  }
+
+  /* La règle « livraison offerte » la plus accessible parmi celles qui sont
+     utilisables : automatique, ou liée au code saisi. */
+  function usableShippingRule() {
+    var best = null;
+    discounts.forEach(function (d) {
+      if (d.type !== 'shipping') return;
+      var usable = d.auto || (appliedCode && d.h === codeHash(appliedCode));
+      if (!usable) return;
+      if (!best || (d.min || 0) < (best.min || 0)) best = d;
+    });
+    return best;
+  }
+
+  function shippingThreshold() {
+    var rule = usableShippingRule();
+    if (rule) return Number(rule.min) || 0;
+    return config.freeShippingThreshold || 100;
+  }
+
+  function applyCode(raw) {
+    var code = String(raw || '').trim().toUpperCase();
+    if (!code) return;
+    appliedCode = findByCode(code) ? code : '';
+    writeJson(CODE_KEY, appliedCode);
+    /* Le code refusé n'est pas retenu : il sert juste à afficher le message. */
+    renderCart(code);
+  }
+
+  function clearCode() {
+    appliedCode = '';
+    writeJson(CODE_KEY, '');
+    renderCart();
+  }
+
+  function initCartCode() {
+    var form = $('[data-cart-code]');
+    if (!form) return;
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var input = $('[data-cart-code-input]', form);
+      applyCode(input ? input.value : '');
+      if (input) input.value = '';
+    });
+  }
+
   function flashButton(button) {
     if (!button) return;
     var original = button.innerHTML;
@@ -394,7 +516,7 @@
     saveCart();
   }
 
-  function renderCart() {
+  function renderCart(attempted) {
     var count = cartCount();
     $$('[data-cart-count]').forEach(function (el) {
       el.textContent = String(count);
@@ -442,18 +564,79 @@
 
     if (foot) {
       foot.hidden = false;
-      var total = cartTotal();
-      var threshold = config.freeShippingThreshold || 100;
-      var remaining = Math.max(0, threshold - total);
+
+      var subtotal = cartTotal();
+      var kept = chosenDiscounts();
+      var saved = kept.reduce(function (sum, d) { return sum + d.amount; }, 0);
+      var goods = Math.max(0, Math.round((subtotal - saved) * 100) / 100);
+
+      var threshold = shippingThreshold();
+      var remaining = Math.max(0, threshold - subtotal);
+
+      /* Sans règle utilisable, on retombe sur le seuil des réglages : la
+         boutique se comporte comme avant que les codes existent. */
+      var rule = usableShippingRule();
+      var freeShipping = kept.some(function (d) { return d.shipping; })
+        || (!rule && subtotal >= (config.freeShippingThreshold || 0));
+
+      var shippingCost = Number(config.shippingCost) || 0;
+      var shippingDue = freeShipping ? 0 : shippingCost;
+      var total = Math.round((goods + shippingDue) * 100) / 100;
+
       $('[data-cart-total]', foot).textContent = money(total);
-      $('[data-cart-progress] i', foot).style.width = Math.min(100, (total / threshold) * 100) + '%';
-      $('[data-cart-shipping]', foot).textContent = remaining > 0
-        ? 'Plus que ' + money(remaining) + ' pour la livraison offerte.'
-        : 'Livraison offerte : c’est acquis.';
+      $('[data-cart-progress] i', foot).style.width =
+        Math.min(100, threshold ? (subtotal / threshold) * 100 : 100) + '%';
+      $('[data-cart-shipping]', foot).textContent = freeShipping || remaining <= 0
+        ? 'Livraison offerte : c’est acquis.'
+        : 'Plus que ' + money(remaining) + ' pour la livraison offerte.';
+
+      /* Détail : sous-total, puis une ligne par réduction retenue. */
+      var sums = $('[data-cart-sums]', foot);
+      if (sums) {
+        var rows = '<div class="cart-sum"><span>Sous-total</span><span>' + money(subtotal) + '</span></div>';
+
+        /* Une ligne par remise chiffrée. */
+        kept.forEach(function (d) {
+          if (d.shipping) return;
+          rows += '<div class="cart-sum cart-sum--off"><span>' + escapeHtml(d.label) + '</span>'
+            + '<span>&minus;' + money(d.amount) + '</span></div>';
+        });
+
+        /* La livraison figure toujours : c'est ce qui rend la réduction
+           « livraison offerte » lisible dans le prix final. */
+        rows += '<div class="cart-sum' + (freeShipping ? ' cart-sum--off' : '') + '">'
+          + '<span>Livraison</span><span>'
+          + (freeShipping ? 'Offerte' : money(shippingCost)) + '</span></div>';
+
+        sums.innerHTML = rows;
+      }
+
+      /* Message du champ de code. */
+      var note = $('[data-cart-code-note]', foot);
+      if (note) {
+        var found = findByCode(appliedCode);
+        note.classList.remove('is-ok');
+        if (attempted && !findByCode(attempted)) {
+          note.innerHTML = 'Code inconnu ou plus valable.';
+        } else if (appliedCode && found && subtotal < (found.min || 0)) {
+          note.innerHTML = 'Code ' + escapeHtml(appliedCode) + ' enregistré : il s’applique dès '
+            + money(found.min) + ' d’achat.';
+        } else if (appliedCode && found) {
+          note.classList.add('is-ok');
+          note.innerHTML = 'Code ' + escapeHtml(appliedCode) + ' appliqué. '
+            + '<button type="button" class="cart-code__drop" data-cart-code-drop>Retirer</button>';
+        } else {
+          note.innerHTML = '';
+        }
+      }
     }
   }
 
   document.addEventListener('click', function (event) {
+    if (event.target.closest('[data-cart-code-drop]')) {
+      clearCode();
+      return;
+    }
     var add = event.target.closest('[data-add-to-cart]');
     if (add) {
       event.preventDefault();
@@ -566,12 +749,31 @@
       }, reduceMotion ? 0 : 220);
     }
 
+    /* Plusieurs visuels : ils défilent seuls au format téléphone, jusqu'à la
+       première action du visiteur. Un seul visuel : rien ne bouge. */
+    var autoTimer = null;
+
+    function stopAuto() {
+      if (!autoTimer) return;
+      window.clearInterval(autoTimer);
+      autoTimer = null;
+    }
+
+    function startAuto() {
+      if (reduceMotion || galleryImages.length < 2) return;
+      if (!window.matchMedia(PHONE).matches) return;
+      autoTimer = window.setInterval(function () {
+        select((galleryIndex + 1) % galleryImages.length);
+      }, GALLERY_INTERVAL);
+    }
+
     thumbs.forEach(function (thumb, index) {
-      thumb.addEventListener('click', function () { select(index); });
+      thumb.addEventListener('click', function () { stopAuto(); select(index); });
       thumb.addEventListener('mouseenter', function () { select(index); });
     });
 
-    stage.addEventListener('click', function () { openLightbox(galleryIndex); });
+    stage.addEventListener('click', function () { stopAuto(); openLightbox(galleryIndex); });
+    startAuto();
 
     if (lightbox) {
       $('[data-lightbox-close]', lightbox).addEventListener('click', closeLightbox);
@@ -604,6 +806,167 @@
     observer.observe(anchor);
   }
 
+  /* ---------- Rubans qui défilent en continu ---------- */
+
+  /* Bandeau d'annonces, ruban des soins, ruban des avis : la piste contient
+     deux copies du contenu et glisse de la moitié de sa largeur. La durée est
+     calculée pour que la vitesse reste la même quel que soit le nombre
+     d'éléments. */
+  function initStrips() {
+    $$('[data-strip]').forEach(function (strip) {
+      var track = $('[data-strip-track]', strip);
+      if (!track) return;
+
+      if (reduceMotion) {
+        track.style.animation = 'none';
+        return;
+      }
+
+      var speed = parseFloat(strip.getAttribute('data-strip-speed')) || 44;
+
+      function sync() {
+        var width = track.scrollWidth / 2;
+        if (!width) return;
+        strip.style.setProperty('--strip-duration', Math.max(12, Math.round(width / speed)) + 's');
+      }
+
+      sync();
+      window.addEventListener('resize', sync);
+      window.addEventListener('load', sync);
+    });
+  }
+
+  /* ---------- Visuels du hero ---------- */
+
+  /* Plusieurs visuels : ils défilent, mais seulement au format téléphone.
+     Un seul visuel : rien ne bouge. */
+  function initHeroSlides() {
+    var media = $('[data-hero-slides]');
+    if (!media) return;
+
+    var slides = $$('.hero__slide', media);
+    if (slides.length < 2 || reduceMotion) return;
+
+    var query = window.matchMedia(PHONE);
+    var index = 0;
+    var timer = null;
+
+    function show(next) {
+      slides[index].classList.remove('is-active');
+      index = (next + slides.length) % slides.length;
+      slides[index].classList.add('is-active');
+    }
+
+    function apply() {
+      if (query.matches) {
+        if (!timer) timer = window.setInterval(function () { show(index + 1); }, HERO_INTERVAL);
+        return;
+      }
+      if (timer) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+      if (index !== 0) show(0);
+    }
+
+    apply();
+    if (query.addEventListener) query.addEventListener('change', apply);
+    else if (query.addListener) query.addListener(apply);
+  }
+
+  /* ---------- Diaporama des meilleures ventes ---------- */
+
+  /* Un soin à la fois, changement automatique. Un appui sur une pastille
+     reprend la main et relance le compte à rebours. Comme le diaporama
+     n'existe qu'au format téléphone, rien ne tourne ailleurs. */
+  function initProductShow() {
+    var show = $('[data-pshow]');
+    if (!show) return;
+
+    var slides = $$('[data-pshow-slide]', show);
+    var dots = $$('[data-pshow-dot]', show);
+    if (slides.length < 2) return;
+
+    var delay = parseInt(show.getAttribute('data-pshow-interval'), 10) || 3000;
+    var query = window.matchMedia(PHONE);
+    var index = 0;
+    var timer = null;
+
+    var leaveTimer = null;
+
+    function select(next) {
+      var previous = slides[index];
+      previous.classList.remove('is-active');
+      if (dots[index]) dots[index].classList.remove('is-active');
+
+      index = (next + slides.length) % slides.length;
+      slides[index].classList.add('is-active');
+      if (dots[index]) dots[index].classList.add('is-active');
+
+      /* Le soin qui sort poursuit sa course vers la droite, puis retrouve sa
+         place à gauche pour pouvoir entrer à nouveau. */
+      if (previous === slides[index]) return;
+      previous.classList.add('is-leaving');
+      if (leaveTimer) window.clearTimeout(leaveTimer);
+      leaveTimer = window.setTimeout(function () {
+        slides.forEach(function (slide) {
+          if (!slide.classList.contains('is-active')) slide.classList.remove('is-leaving');
+        });
+      }, SLIDE_LEAVE);
+    }
+
+    function stop() {
+      if (!timer) return;
+      window.clearInterval(timer);
+      timer = null;
+    }
+
+    function start() {
+      stop();
+      if (reduceMotion || !query.matches) return;
+      timer = window.setInterval(function () { select(index + 1); }, delay);
+    }
+
+    dots.forEach(function (dot, i) {
+      dot.addEventListener('click', function () {
+        select(i);
+        start();
+      });
+    });
+
+    function apply() {
+      if (query.matches) {
+        start();
+        return;
+      }
+      stop();
+      if (index !== 0) select(0);
+    }
+
+    apply();
+    if (query.addEventListener) query.addEventListener('change', apply);
+    else if (query.addListener) query.addListener(apply);
+  }
+
+  /* ---------- Colonnes du pied de page ---------- */
+
+  /* Elles arrivent ouvertes : au format téléphone on les replie pour
+     raccourcir le pied de page, ailleurs elles restent dépliées. */
+  function initFooterGroups() {
+    var groups = $$('.fgroup');
+    if (!groups.length) return;
+
+    var query = window.matchMedia(PHONE);
+
+    function apply() {
+      groups.forEach(function (group) { group.open = !query.matches; });
+    }
+
+    apply();
+    if (query.addEventListener) query.addEventListener('change', apply);
+    else if (query.addListener) query.addListener(apply);
+  }
+
   /* ---------- Bande vidéo défilante ---------- */
 
   function initVideoStrip() {
@@ -611,6 +974,13 @@
     if (!strip) return;
     var track = $('[data-vstrip-track]', strip);
     if (!track) return;
+
+    /* La piste porte deux copies de la liste : moins de deux vidéos par copie,
+       il n'y a rien à faire défiler. */
+    if (track.children.length < 4) {
+      track.style.animation = 'none';
+      return;
+    }
 
     /* Vitesse constante quel que soit le nombre de vidéos : environ 48 px/s. */
     function sync() {
@@ -893,6 +1263,10 @@
   initHeader();
   initHeroParallax();
   initAnnounce();
+  initStrips();
+  initHeroSlides();
+  initProductShow();
+  initFooterGroups();
   initVideoStrip();
   initCounters();
   initCarousels();
@@ -904,5 +1278,6 @@
   initRegion();
   initForms();
   initToTop();
+  initCartCode();
   renderCart();
 })();

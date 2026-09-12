@@ -24,6 +24,7 @@
       help: 'Les intitulés affichés au-dessus de chaque bloc de la page d’accueil.',
       fields: [
         F('bestsellersTitle', 'Sélection — titre'), F('bestsellersLede', 'Sélection — accroche'),
+        F('productsStripTitle', 'Ruban des soins — titre'),
         F('newTitle', 'Catalogue — titre'), F('newLede', 'Catalogue — accroche'),
         F('videosTitle', 'Vidéos — titre'), F('videosLede', 'Vidéos — accroche'),
         F('reviewsTitle', 'Avis — titre'), F('reviewsLede', 'Avis — accroche'),
@@ -46,7 +47,11 @@
         F('primary.label', 'Bouton principal — libellé'),
         F('primary.url', 'Bouton principal — lien'),
         F('secondary.label', 'Bouton secondaire — libellé'),
-        F('secondary.url', 'Bouton secondaire — lien')
+        F('secondary.url', 'Bouton secondaire — lien'),
+        F('phonePrimary.label', 'Téléphone — bouton 1'),
+        F('phonePrimary.url', 'Téléphone — bouton 1, lien'),
+        F('phoneSecondary.label', 'Téléphone — bouton 2'),
+        F('phoneSecondary.url', 'Téléphone — bouton 2, lien')
       ]
     },
     {
@@ -98,6 +103,11 @@
       key: 'facts', title: 'Les chiffres clés', items: true,
       item: [F('value', 'Valeur affichée'), F('label', 'Libellé'), F('text', 'Texte', 'textarea')],
       blank: { value: '', label: '', text: '' }
+    },
+    {
+      key: 'band', title: 'Bandeau 417 (téléphone)',
+      help: 'Grande image avec une phrase, sous les meilleures ventes.',
+      fields: [F('title', 'Phrase'), F('image', 'Image', 'image')]
     },
     {
       key: 'storyTeaser', title: 'Bloc « Notre source »',

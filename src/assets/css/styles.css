@@ -827,6 +827,28 @@ body:not(.has-hero) main { padding-top: calc(var(--header-h) + var(--announce-h)
 .cart-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; }
 .cart-total strong { font-size: 20px; font-family: var(--font-display); font-weight: 400; }
 .cart-note { font-size: 11.5px; color: var(--muted); text-align: center; }
+.cart-note.is-ok { color: var(--ok); }
+
+.cart-code { display: flex; gap: 8px; }
+.cart-code input {
+  flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 11px 18px;
+  border: 1px solid var(--line-2); border-radius: var(--r-pill);
+  background: var(--white); color: var(--ink); font: inherit; font-size: 13px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  transition: border-color var(--t-fast) var(--e-out);
+}
+.cart-code input::placeholder { color: var(--muted-2); letter-spacing: 0.06em; }
+.cart-code input:hover { border-color: var(--muted-2); }
+.cart-code .btn { flex: 0 0 auto; }
+.cart-code__drop {
+  border: 0; background: none; padding: 0 0 1px;
+  color: var(--muted); font-size: 11.5px; text-decoration: underline;
+}
+.cart-code__drop:hover { color: var(--ink); }
+
+.cart-sums { display: grid; gap: 6px; }
+.cart-sum { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--muted); }
+.cart-sum--off { color: var(--ok); }
 .cart-progress { height: 4px; background: var(--line); border-radius: var(--r-pill); overflow: hidden; }
 .cart-progress i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--mineral); transition: width 0.6s var(--e-out); }
 
@@ -894,11 +916,11 @@ body:not(.has-hero) main { padding-top: calc(var(--header-h) + var(--announce-h)
 /* ---------- Bande vidéo verticale ---------- */
 
 .vstrip { overflow: hidden; padding-block: 4px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
-.vstrip__track { display: flex; gap: 14px; width: max-content; animation: vslide var(--vstrip-duration, 60s) linear infinite; }
+.vstrip__track { display: flex; width: max-content; animation: vslide var(--vstrip-duration, 60s) linear infinite; }
 .vstrip:hover .vstrip__track { animation-play-state: paused; }
 @keyframes vslide { to { transform: translate3d(-50%, 0, 0); } }
 
-.vcard { flex: 0 0 auto; width: clamp(154px, 15vw, 208px); display: block; }
+.vcard { flex: 0 0 auto; width: clamp(154px, 15vw, 208px); display: block; margin-right: 14px; }
 .vcard__media {
   position: relative; display: block; overflow: hidden;
   aspect-ratio: 9 / 16; border-radius: var(--r); background: var(--bone-2);
@@ -1174,13 +1196,434 @@ body:not(.has-hero) main { padding-top: calc(var(--header-h) + var(--announce-h)
   .card__add { opacity: 1; transform: none; }
 }
 
+/* ---------- Rubans qui defilent en continu ---------- */
+
+/* Trois rubans partagent le meme moteur : la piste contient deux copies
+   identiques du contenu et glisse de la moitie de sa largeur, sans fin.
+   Ils ne servent que la version telephone, d'ou l'affichage desactive. */
+
+.ticker, .rstrip, .section--strip, .section--band { display: none; }
+
+.ticker__track, .rstrip__track {
+  display: flex; width: max-content;
+  animation: strip var(--strip-duration, 40s) linear infinite;
+}
+@keyframes strip { to { transform: translate3d(-50%, 0, 0); } }
+
+.ticker { overflow: hidden; height: var(--announce-h); }
+.ticker__track { align-items: center; height: 100%; }
+.ticker__item {
+  display: inline-flex; align-items: center; gap: 12px; white-space: nowrap;
+  padding-right: 24px; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+}
+.ticker__item::after { content: "◆"; font-size: 5px; color: var(--gold); }
+
+.rstrip {
+  overflow: hidden; padding-block: 2px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.rstrip__track { align-items: stretch; }
+.rstrip .review { flex: 0 0 auto; width: 76vw; max-width: 330px; margin-right: 10px; }
+
+/* ---------- Diaporama des meilleures ventes ---------- */
+
+/* Les soins sont empilés dans une seule case de grille : la hauteur est celle
+   du plus grand, donc rien ne saute quand le soin change. */
+.pshow { padding-inline: var(--gutter); }
+.pshow__track { display: grid; }
+.pslide {
+  grid-area: 1 / 1; display: block; text-align: center;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.7s var(--e-out), visibility 0.7s var(--e-out);
+}
+.pslide.is-active { opacity: 1; visibility: visible; }
+.pslide__media {
+  display: block; overflow: hidden; border-radius: var(--r-lg);
+  aspect-ratio: 1 / 1; background: var(--bone-2);
+}
+.pslide__media img { width: 100%; height: 100%; object-fit: cover; }
+.pslide__name {
+  display: block; margin-top: 16px;
+  font-family: var(--font-display); font-size: 19px; line-height: 1.3;
+}
+.pshow__dots { display: flex; justify-content: center; gap: 7px; margin-top: 18px; }
+.pshow__dot {
+  width: 7px; height: 7px; padding: 0; border: 0; border-radius: var(--r-pill);
+  background: var(--line-2);
+  transition: background var(--t-fast) var(--e-out), transform var(--t-fast) var(--e-out);
+}
+.pshow__dot.is-active { background: var(--ink); transform: scale(1.35); }
+
+/* ---------- Bandeau de marque ---------- */
+
+.band { position: relative; overflow: hidden; }
+.band img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 6 / 5; }
+.band::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(23, 19, 15, 0.12) 0%, rgba(23, 19, 15, 0.66) 100%);
+}
+.band__title {
+  position: absolute; inset: auto 0 0 0; z-index: 2;
+  padding: 0 20px 28px; text-align: center; color: var(--white);
+  font-size: clamp(24px, 7.5vw, 36px); line-height: 1.15;
+}
+
+/* ---------- Deux lignes de texte qui se croisent ---------- */
+
+/* La seconde ligne n'existe que sur téléphone. */
+.marquee--dual .marquee__track + .marquee__track { display: none; }
+
+/* ---------- Hero : visuels qui defilent, degrade de sortie ---------- */
+
+.hero__media .hero__slide {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transform: scale(1.09); animation: none;
+  transition: opacity 1.2s var(--e-out);
+}
+.hero__media .hero__slide.is-active { opacity: 1; animation: heroZoom 12s var(--e-soft) forwards; }
+
+/* Le hero porte deux paires de boutons : celle du telephone mene aux deux
+   familles de soins, celle du grand ecran reste inchangee. */
+.hero__fade, .hero__cta--phone { display: none; }
+
+/* ---------- Presse : une seule ligne qui defile sur telephone ---------- */
+
+.press-strip { display: none; }
+.press-strip__track {
+  display: flex; align-items: center; width: max-content;
+  animation: strip var(--strip-duration, 40s) linear infinite;
+  animation-direction: reverse;
+}
+.press-strip__track img { flex: 0 0 auto; margin-right: 30px; }
+
+/* ---------- Pied de page depliable ---------- */
+
+/* Sur grand ecran les colonnes restent ouvertes et le resume ressemble a un
+   simple intitule : seule la version telephone se replie. */
+.fgroup summary { display: block; list-style: none; cursor: default; }
+.fgroup summary::-webkit-details-marker { display: none; }
+.fgroup summary::marker { content: ""; }
+.fgroup__sign { display: none; }
+
+/* ==========================================================================
+   Version telephone : accueil recentre, rubans continus, pied de page court
+   ========================================================================== */
+
+@media (max-width: 720px) {
+  :root {
+    /* Echelle relevee : plus de texte illisible sur la page d'accueil. */
+    --text-xs: 11px;
+    --text-sm: 12.5px;
+    --text-base: 15px;
+    --text-lg: 16px;
+    --title-sm: 18px;
+    --title-md: 24px;
+    --title-lg: 29px;
+    --title-xl: 42px;
+
+    --announce-h: 30px;
+  }
+
+  /* ---------- Typographie ---------- */
+
+  body { font-weight: 400; line-height: 1.6; }
+  h1, h2, h3, h4 { font-weight: 500; letter-spacing: -0.01em; line-height: 1.14; }
+  .title, .title--md, .title--lg { line-height: 1.1; }
+  .hero__title { font-weight: 500; letter-spacing: -0.02em; line-height: 1.03; }
+  .hero__text { line-height: 1.55; }
+  .lede { line-height: 1.6; }
+  .card__title { font-weight: 500; letter-spacing: -0.004em; }
+  .review__text { font-weight: 400; }
+  .btn { font-weight: 400; letter-spacing: 0.1em; }
+
+  /* ---------- Bandeau haut : un ruban qui ne s'arrete jamais ---------- */
+
+  /* Le texte reste lisible par les lecteurs d'ecran, le ruban est decoratif. */
+  .announce__inner {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .ticker { display: block; }
+  /* Il ne se replie plus au defilement : le message reste toujours visible. */
+  .header.is-solid .announce { height: var(--announce-h); opacity: 1; }
+
+  /* ---------- Hero : tout au centre ---------- */
+
+  .hero { height: 88svh; min-height: 500px; }
+  .hero::after {
+    background:
+      linear-gradient(180deg, rgba(23, 19, 15, 0.6) 0%, rgba(23, 19, 15, 0.28) 44%, rgba(23, 19, 15, 0.1) 100%),
+      radial-gradient(115% 58% at 50% 46%, rgba(23, 19, 15, 0.52), rgba(23, 19, 15, 0) 72%);
+  }
+  .hero__inner {
+    inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: calc(var(--header-h) + var(--announce-h)) 0 18%;
+    text-align: center;
+    z-index: 5;
+  }
+  .hero__inner .container { display: flex; flex-direction: column; align-items: center; }
+  .hero__eyebrow { margin-bottom: 13px; }
+  .hero__title { max-width: 17ch; }
+  .hero__text { margin-top: 14px; max-width: 32ch; }
+  .hero__cta { display: none; }
+  .hero__cta--phone { display: flex; justify-content: center; margin-top: 24px; gap: 10px; }
+
+  /* Degrade entre le hero et la suite de la page : aucune cassure nette. */
+  .hero__fade {
+    display: block; position: absolute; inset: auto 0 -1px 0; z-index: 3;
+    height: 32%; pointer-events: none;
+    background: linear-gradient(180deg,
+      rgba(247, 243, 238, 0) 0%,
+      rgba(247, 243, 238, 0.14) 38%,
+      rgba(247, 243, 238, 0.72) 74%,
+      var(--bone) 100%);
+  }
+
+  /* ---------- Les textes minuscules qui n'apportaient rien ---------- */
+
+  .eyebrow { display: none; }
+  .card__cat { display: none; }
+  .fact__text { display: none; }
+  .footer__brand p { display: none; }
+  .footer__tagline { display: none; }
+
+  /* ---------- Le ruban des soins remplace les deux cartes de gammes ---------- */
+
+  /* ---------- L'ordre de la page d'accueil ---------- */
+
+  /* L'ordre du document reste celui du grand écran ; seul l'affichage change,
+     ce qui évite de dupliquer le contenu de la page. */
+  body.has-hero main { display: flex; flex-direction: column; }
+  body.has-hero main > * { flex: 0 0 auto; }
+
+  .hero { order: 1; }
+  .section--strip { order: 2; display: block; }
+  .section--band { order: 3; display: block; }
+  .marquee--dual { order: 4; }
+  .reassure { order: 5; }
+  .section--videos { order: 6; }
+  .section--best { order: 7; }
+  .section--about { order: 8; }
+  .section--story { order: 9; }
+  .section--facts { order: 10; }
+  .section--more { order: 11; }
+  .section--shop { order: 12; }
+  .section--reviews { order: 13; }
+  .section--press { order: 14; }
+  .section--feature { order: 15; }
+  .section--tags { order: 16; }
+
+  .section--cats, .section--ritual { display: none; }
+
+  /* L'ordre visuel ne suit plus l'ordre du document : la règle qui supprimait
+     l'écart entre deux sections voisines n'a plus de sens ici. */
+  .section--sm + .section--sm { padding-top: var(--space-sm); }
+
+  /* ---------- Garanties : deux colonnes, livraison et retour ---------- */
+
+  /* Les deux autres garanties (expédition, paiement) restent sur grand écran.
+     Leur rang vient de la rubrique Contenu du back-office. */
+  .reassure { border-bottom: 0; }
+  .reassure__grid { grid-template-columns: 1fr 1fr; }
+  .reassure__item[data-r="1"], .reassure__item[data-r="3"] { display: none; }
+  .reassure__item { padding: 18px 14px; text-align: center; }
+  .reassure__item strong { font-size: 12px; }
+  .reassure__item span { margin-top: 6px; font-size: 13px; }
+
+  /* ---------- Les deux lignes de texte qui se croisent ---------- */
+
+  .marquee--dual { padding-block: 5px; }
+  .marquee--dual .marquee__track { padding-block: 7px; }
+  .marquee--dual .marquee__track + .marquee__track { display: flex; }
+  .marquee--dual .marquee__track:first-child { animation-direction: reverse; }
+
+  /* ---------- Les incontournables : titre et accroche centrés ---------- */
+
+  .section--best .head__row { flex-direction: column; align-items: center; text-align: center; gap: 12px; }
+  .section--best .lede { margin-inline: auto; }
+
+  /* ---------- Avis : ruban continu au lieu du carrousel ---------- */
+
+  /* ---------- Meilleures ventes : ovale, glissement vers la droite ---------- */
+
+  /* Les visuels sont un peu resserres et l'ovale vient d'un cadre plus haut
+     que large arrondi de moitie. */
+  .pshow { padding-inline: calc(var(--gutter) + 7%); }
+  .pslide {
+    transform: translate3d(-11%, 0, 0);
+    transition: opacity 0.85s var(--e-out), transform 0.85s var(--e-out), visibility 0.85s var(--e-out);
+  }
+  .pslide.is-active { transform: none; }
+  /* Le soin qui sort continue vers la droite pendant que le suivant entre. */
+  .pslide.is-leaving { opacity: 0; visibility: visible; transform: translate3d(11%, 0, 0); }
+  .pslide__media { aspect-ratio: 4 / 5; border-radius: 50%; }
+  .pslide__name { margin-top: 20px; font-size: 19px; font-weight: 500; letter-spacing: -0.004em; }
+
+  /* ---------- Bandeau 417 : phrase au centre de l'image ---------- */
+
+  .band img { aspect-ratio: 1 / 1; }
+  .band__title {
+    inset: 0; display: grid; place-items: center;
+    padding: 0 28px; font-size: clamp(27px, 8.4vw, 40px); line-height: 1.12;
+    font-weight: 500; letter-spacing: -0.012em;
+  }
+
+  /* ---------- Titres et textes retires ---------- */
+
+  /* Le titre « En mouvement » et l'accroche des incontournables disparaissent
+     a l'oeil. Le titre reste dans la page : il nomme sa section pour les
+     lecteurs d'ecran. */
+  .section--videos .head,
+  .section--story .title {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .section--best .lede { display: none; }
+  /* Le paragraphe « À 417 mètres sous le niveau de la mer… » n'est plus montre. */
+  .story__body p:not(.eyebrow) { display: none; }
+
+  /* ---------- Respiration entre les sections ---------- */
+
+  .section--best { padding-block: 34px; }
+  .section--press { padding-block: 34px; }
+  .section--reviews { padding-block: 34px 48px; }
+
+  /* ---------- Rubans : jamais d'arret ---------- */
+
+  /* Sur mobile un appui laisse parfois l'element en etat survole, ce qui
+     figeait le defilement. Les rubans tournent donc en continu. */
+  .marquee:hover .marquee__track,
+  .vstrip:hover .vstrip__track { animation-play-state: running; }
+
+  /* ---------- Presse : une seule ligne, en boucle ---------- */
+
+  .press { display: none; }
+  .press-strip {
+    display: block; overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  .press-strip__track img { width: 86px; max-height: 38px; object-fit: contain; margin-right: 26px; }
+
+  /* ---------- Sections retirees du telephone ---------- */
+
+  .section--feature, .section--tags { display: none; }
+
+  /* ---------- Avis : cartes plus petites, defilement plus lent ---------- */
+
+  #reviews-carousel { display: none; }
+  .rstrip { display: block; }
+  .rstrip .review { width: 64vw; max-width: 268px; padding: 13px 14px; gap: 8px; }
+  .section--reviews .head__row .link { display: none; }
+
+  /* ---------- La marque en un seul bloc ---------- */
+
+  /* « 417, en trois phrases » et « Née au point le plus bas de la Terre » se
+     suivent sans rupture : le second titre reste lu par les lecteurs d'ecran
+     mais n'apparait plus, sinon le bloc se lirait comme deux sections. */
+  .section--about { padding-bottom: 0; }
+  .section--story { padding-top: 16px; }
+  .section--about .lede { font-size: 13.5px; }
+  .story__body .link { margin-top: 14px; }
+  .story__media { aspect-ratio: 16 / 10; }
+  .about__points li { padding: 9px 10px; }
+  .about__points strong { font-size: 14px; }
+  .about__points span { font-size: 12.5px; }
+
+  /* ---------- La boutique, en plus discret ---------- */
+
+  .section--shop { padding-block: 20px; }
+  .section--shop .title { font-size: 18px; }
+  .section--shop p { font-size: 12px; }
+  /* Image à gauche, description à droite : l'ordre du document suffit. */
+  .shop { grid-template-columns: 0.85fr 1fr; gap: 12px; align-items: center; }
+  .shop__media { padding: 0; }
+  .shop__media img { aspect-ratio: 1 / 1; }
+  .shop__body .btn { margin-top: 4px; }
+
+  /* Le bouton « Lire notre histoire » est retiré du bloc de marque. */
+  .section--story .link, .section--about .link { display: none; }
+
+  /* ---------- Deux visuels sur une carte : ils alternent tout seuls ---------- */
+
+  .card__top[data-multi] .card__media img.is-hover { animation: cardswap 9s var(--e-soft) infinite; }
+  .card:nth-child(2n) .card__top[data-multi] .card__media img.is-hover { animation-delay: -2.2s; }
+  .card:nth-child(3n) .card__top[data-multi] .card__media img.is-hover { animation-delay: -4.4s; }
+  .card:nth-child(4n) .card__top[data-multi] .card__media img.is-hover { animation-delay: -6.6s; }
+  @keyframes cardswap { 0%, 36% { opacity: 0; } 50%, 86% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* ---------- Textes agrandis ---------- */
+
+  .card__title { font-size: 15px; line-height: 1.3; }
+  .card__price { font-size: 13.5px; }
+  .card__badge { font-size: 9.5px; padding: 5px 10px; }
+  .btn { min-height: 44px; padding: 12px 22px; font-size: 11px; }
+  .btn--sm { min-height: 38px; padding: 10px 17px; font-size: 10.5px; }
+  .link { font-size: 12px; }
+  .lede { font-size: 14.5px; }
+  .crumb { font-size: 11px; }
+  .review__text { font-size: 14px; line-height: 1.5; -webkit-line-clamp: 6; }
+  .review__meta { font-size: 12px; }
+  .stars svg { width: 12px; height: 12px; }
+  .about__points strong { font-size: 15px; }
+  .about__points span { font-size: 13px; }
+  .fact__value { font-size: 34px; }
+  .fact__label { font-size: 11px; }
+  .vcard { width: 124px; }
+  .vcard__label { margin-top: 8px; font-size: 12px; }
+  .marquee__track span { font-size: 18px; }
+  .tag { font-size: 11.5px; padding: 8px 15px; }
+  .feature__body p { font-size: 14px; }
+  .panel h1 { font-size: 27px; }
+  .panel__price { font-size: 21px; }
+  .perks li { font-size: 13px; }
+  .acc summary { font-size: 15px; }
+  .acc__body { font-size: 13.5px; }
+  .rte { font-size: 14.5px; }
+  .quote p { font-size: 18px; }
+  .news__form input { font-size: 14px; }
+  .toolbar__count { font-size: 12px; }
+  .chip { font-size: 10.5px; }
+  .filters select { font-size: 10.5px; }
+  .field input, .field select, .field textarea { font-size: 14px; }
+  .contact-cards p { font-size: 13px; }
+
+  /* ---------- Pied de page court, replie en menus ---------- */
+
+  .footer__top { flex-direction: column; gap: 10px; padding-block: 14px 6px; }
+  .footer__brand { gap: 10px; }
+  .footer__brand img { height: 22px; }
+  .footer__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; width: 100%; }
+  .fgroup { border-top: 1px solid rgba(247, 243, 238, 0.12); }
+  .fgroup summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 0; cursor: pointer;
+  }
+  .fgroup summary h4 { margin-bottom: 0; font-size: 11.5px; color: rgba(247, 243, 238, 0.88); }
+  .fgroup__sign { display: block; position: relative; width: 11px; height: 11px; flex: 0 0 auto; }
+  .fgroup__sign::before, .fgroup__sign::after {
+    content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px;
+    background: rgba(247, 243, 238, 0.65);
+    transition: transform var(--t-fast) var(--e-out);
+  }
+  .fgroup__sign::after { transform: rotate(90deg); }
+  .fgroup[open] .fgroup__sign::after { transform: rotate(0deg); }
+  .fgroup ul { gap: 9px; padding-bottom: 14px; }
+  .footer ul a { font-size: 13px; }
+  .footer__bottom { padding-block: 12px; font-size: 11px; }
+}
+
 @media (max-width: 420px) {
-  :root { --gutter: 11px; --space: 26px; --space-sm: 17px; }
-  .grid { gap: 15px 7px; }
-  .cats, .carousel__view { gap: 7px; }
-  .vcard { width: 92px; }
-  .card__title { font-size: 11.5px; }
-  .fact__value { font-size: 26px; }
+  :root { --gutter: 12px; --space: 28px; --space-sm: 19px; }
+  .grid { gap: 16px 8px; }
+  .cats, .carousel__view { gap: 8px; }
+  .vcard { width: 110px; }
+  .card__title { font-size: 14px; }
+  .fact__value { font-size: 30px; }
+  .pslide__name { font-size: 17px; }
+  .rstrip .review { width: 80vw; }
 }
 
 @media (prefers-reduced-motion: reduce) {
