@@ -396,6 +396,9 @@ const result = store.update((data) => {
     if (data.content[key] === undefined) data.content[key] = content[key];
   });
 
+  /* La boîte de réception des formulaires de la boutique. */
+  if (!Array.isArray(data.messages)) data.messages = [];
+
   /* Les pays enregistrés avant la détection automatique n'ont ni code ISO ni
      langue : on les complète depuis le catalogue versionné, par nom. */
   const reference = new Map(site.countries.map((c) => [c.name, c]));

@@ -664,6 +664,6 @@
     "id": ""
   },
   "forms": {
-    "endpoint": ""
+    "endpoint": "/api/contact"
   }
 }

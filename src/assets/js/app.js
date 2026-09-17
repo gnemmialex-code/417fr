@@ -1684,7 +1684,7 @@
 
         fetch(forms.endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
           body: JSON.stringify(payload)
         }).then(function (response) {
           if (!response.ok) throw new Error(response.status);

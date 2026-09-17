@@ -382,6 +382,22 @@ code { font-family: var(--font-body); font-size: 0.92em; letter-spacing: 0.02em;
 .table tbody tr.is-hidden td:not(:last-child) { opacity: 0.42; }
 .table tbody tr.is-hidden:hover td { opacity: 0.7; }
 
+/* Un message pas encore ouvert se repère à son filet, comme une boîte de
+   réception. */
+.table tbody tr.is-unread td:first-child { box-shadow: inset 2px 0 0 var(--gold); }
+.table tbody tr.is-unread .cell-title { font-weight: 600; }
+
+/* Le texte reçu est rendu tel quel : les retours à la ligne de l'expéditeur
+   sont conservés, et rien n'est interprété. */
+.message-body {
+  margin: 0; padding: 14px 16px; border-radius: var(--radius-sm);
+  background: var(--page); border: 1px solid var(--line);
+  white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; font-size: 13.5px;
+}
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn-row .btn.is-active { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+
 /* ---------- Repeteurs et champs media ---------- */
 
 .card--notice { background: #fdf9f1; border-color: rgba(201, 135, 31, 0.3); }

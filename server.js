@@ -101,6 +101,24 @@ function readBody(req) {
   });
 }
 
+const CONTACT_WINDOW = 10 * 60 * 1000;
+const CONTACT_MAX = 5;
+const contactHits = new Map();
+
+function contactAllowed(ip) {
+  const now = Date.now();
+  const hits = (contactHits.get(ip) || []).filter(function (at) { return now - at < CONTACT_WINDOW; });
+  /* La table ne grossit pas indéfiniment : les adresses inactives sortent. */
+  if (contactHits.size > 5000) contactHits.clear();
+  if (hits.length >= CONTACT_MAX) {
+    contactHits.set(ip, hits);
+    return false;
+  }
+  hits.push(now);
+  contactHits.set(ip, hits);
+  return true;
+}
+
 function session(req) {
   return auth.verify(auth.readCookie(req.headers.cookie, COOKIE));
 }
@@ -141,6 +159,26 @@ async function handleApi(req, res, pathname) {
 
   if (pathname === '/api/logout' && req.method === 'POST') {
     res.setHeader('Set-Cookie', COOKIE + '=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
+    return sendJson(res, 200, { ok: true });
+  }
+
+  /* Formulaires de la boutique. Seule route ouverte sans session : c'est le
+     visiteur qui écrit, il n'a pas de compte. */
+  if (pathname === '/api/contact' && req.method === 'POST') {
+    const ip = req.socket.remoteAddress || 'inconnu';
+    if (!contactAllowed(ip)) {
+      return sendJson(res, 429, { error: 'Trop d’envois. Réessayez dans quelques minutes.' });
+    }
+    const body = await readBody(req);
+    /* « sujet » est le nom posé par le formulaire de la boutique. */
+    const result = admin.receiveMessage({
+      kind: body.kind || body.sujet,
+      name: body.name,
+      email: body.email,
+      phone: body.phone,
+      message: body.message
+    });
+    if (result.error) return sendJson(res, 400, { error: result.error });
     return sendJson(res, 200, { ok: true });
   }
 

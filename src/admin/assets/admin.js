@@ -9,6 +9,7 @@
     stock: { search: '', category: 'all', status: 'all', internal: 'all', sort: 'title', dir: 1 },
     orders: { search: '', status: 'all' },
     customers: { search: '' },
+    messages: { search: '', status: 'all', kind: 'all' },
     shipments: { search: '', status: 'all' }
   };
 
@@ -517,6 +518,140 @@
       + '<th>Nom</th><th>Contact</th><th>Ville</th><th class="num">Commandes</th>'
       + '<th class="num">Total dépensé</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
       + '</section></div>';
+  }
+
+  /* ---------- Vue : messages ---------- */
+
+  /* Ce que la boutique envoie : formulaire de contact et inscriptions à la
+     newsletter. Tout est affiché comme du texte, jamais interprété. */
+
+  var MESSAGE_TONES = {
+    'Nouveau': 'tag--warn',
+    'Lu': 'tag--info',
+    'Traité': 'tag--ok',
+    'Archivé': 'tag--neutral'
+  };
+
+  var MESSAGE_KINDS = { contact: 'Contact', newsletter: 'Newsletter' };
+
+  function messageById(id) {
+    return (state.messages || []).find(function (m) { return m.id === id; });
+  }
+
+  function messageTag(message) {
+    return '<span class="tag ' + (MESSAGE_TONES[message.status] || 'tag--neutral') + '">'
+      + esc(message.status) + '</span>';
+  }
+
+  function excerpt(text, max) {
+    var clean = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!clean) return '—';
+    return clean.length > max ? esc(clean.slice(0, max - 1)) + '…' : esc(clean);
+  }
+
+  /* Le lien de réponse ouvre le client de messagerie avec l'objet déjà posé. */
+  function replyLink(message) {
+    var subject = message.kind === 'newsletter'
+      ? 'Votre inscription à la newsletter 417 France'
+      : 'Votre message à 417 France';
+    return 'mailto:' + encodeURIComponent(message.email)
+      + '?subject=' + encodeURIComponent(subject);
+  }
+
+  function viewMessages() {
+    var f = filters.messages;
+    var query = normalize(f.search);
+
+    var list = (state.messages || []).filter(function (m) {
+      if (f.status !== 'all' && m.status !== f.status) return false;
+      if (f.kind !== 'all' && m.kind !== f.kind) return false;
+      if (!query) return true;
+      return normalize(m.name + ' ' + m.email + ' ' + m.phone + ' ' + m.message).indexOf(query) !== -1;
+    });
+
+    var rows = list.length ? list.map(function (m) {
+      return '<tr' + (m.status === 'Nouveau' ? ' class="is-unread"' : '') + '>'
+        + '<td><span class="cell-title">' + esc(m.name || 'Sans nom') + '</span><br>'
+        + '<span class="cell-sub">' + esc(m.email) + (m.phone ? ' · ' + esc(m.phone) : '') + '</span></td>'
+        + '<td><span class="cell-sub">' + esc(MESSAGE_KINDS[m.kind] || m.kind) + '</span></td>'
+        + '<td>' + excerpt(m.message, 90) + '</td>'
+        + '<td><span class="cell-sub">' + dateTime(m.createdAt) + '</span></td>'
+        + '<td>' + messageTag(m) + '</td>'
+        + '<td class="actions">'
+        + '<button type="button" class="btn btn--ghost btn--sm" data-message-open="' + m.id + '">Ouvrir</button>'
+        + '<button type="button" class="btn btn--ghost btn--sm" data-message-delete="' + m.id + '">Supprimer</button>'
+        + '</td></tr>';
+    }).join('') : emptyRow(6, 'Aucun message',
+      'Les envois du formulaire de contact et les inscriptions à la newsletter arrivent ici.');
+
+    var statusOptions = ['all'].concat(state.messageStatuses || []).map(function (s) {
+      return '<option value="' + esc(s) + '"' + (f.status === s ? ' selected' : '') + '>'
+        + (s === 'all' ? 'Tous les statuts' : esc(s)) + '</option>';
+    }).join('');
+
+    var kindOptions = [['all', 'Tous les formulaires'], ['contact', 'Contact'], ['newsletter', 'Newsletter']]
+      .map(function (pair) {
+        return '<option value="' + pair[0] + '"' + (f.kind === pair[0] ? ' selected' : '') + '>'
+          + pair[1] + '</option>';
+      }).join('');
+
+    return '<div class="view"><section class="card">'
+      + '<div class="toolbar">'
+      + '<input type="search" placeholder="Rechercher un nom, une adresse, un mot…" value="'
+      + esc(f.search) + '" data-filter="messages.search">'
+      + '<select data-filter="messages.kind">' + kindOptions + '</select>'
+      + '<select data-filter="messages.status">' + statusOptions + '</select>'
+      + '<div class="toolbar__right">'
+      + '<button type="button" class="btn btn--ghost btn--sm" id="export-messages">Exporter en CSV</button>'
+      + '</div></div>'
+      + '<div class="table-wrap"><table class="table"><thead><tr>'
+      + '<th>Expéditeur</th><th>Formulaire</th><th>Message</th><th>Reçu le</th><th>Statut</th><th></th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+      + '</section></div>';
+  }
+
+  /* Fiche complète, avec le texte intégral et le changement de statut. */
+  function messageDetail(id) {
+    var m = messageById(id);
+    if (!m) return;
+
+    var statusButtons = (state.messageStatuses || []).map(function (s) {
+      return '<button type="button" class="btn btn--ghost btn--sm' + (m.status === s ? ' is-active' : '')
+        + '" data-message-status="' + esc(s) + '">' + esc(s) + '</button>';
+    }).join('');
+
+    var body = '<div class="detail-grid">'
+      + '<div class="detail-box"><h3>Expéditeur</h3><p>' + esc(m.name || 'Sans nom') + '<br>'
+      + '<a href="mailto:' + esc(m.email) + '">' + esc(m.email) + '</a>'
+      + (m.phone ? '<br>' + esc(m.phone) : '') + '</p></div>'
+      + '<div class="detail-box"><h3>Reçu le</h3><p>' + dateTime(m.createdAt) + '<br>'
+      + '<span class="cell-sub">' + esc(MESSAGE_KINDS[m.kind] || m.kind) + '</span></p></div>'
+      + '</div>'
+      + (m.message
+        ? '<h3 class="form-title">Message</h3><p class="message-body">' + esc(m.message) + '</p>'
+        : '<p class="field-hint">Inscription à la newsletter, sans message.</p>')
+      + '<h3 class="form-title">Statut</h3>'
+      + '<div class="btn-row" id="message-statuses">' + statusButtons + '</div>';
+
+    openModal({
+      title: 'Message de ' + (m.name || m.email),
+      body: body,
+      foot: '<button type="button" class="btn btn--ghost" data-close-modal>Fermer</button>'
+        + '<a class="btn" href="' + replyLink(m) + '">Répondre par e-mail</a>',
+      onOpen: function () {
+        $$('[data-message-status]', modal).forEach(function (button) {
+          button.addEventListener('click', function () {
+            send('messages/status', { id: m.id, status: button.getAttribute('data-message-status') },
+              'Statut mis à jour.').then(closeModal).catch(function () {});
+          });
+        });
+      }
+    });
+
+    /* Ouvrir un message non lu le marque comme lu, sans rien demander. */
+    if (m.status === 'Nouveau') {
+      send('messages/status', { id: m.id, status: 'Lu' }).catch(function () {});
+    }
   }
 
   /* ---------- Vue : livraisons ---------- */
@@ -1242,6 +1377,7 @@
     'tableau-de-bord': { title: 'Tableau de bord', sub: 'Vue d’ensemble de l’activité', view: viewDashboard },
     stock: { title: 'Gestion des stocks', sub: 'Quantités, seuils d’alerte et valeur d’inventaire', view: viewStock },
     commandes: { title: 'Commandes', sub: 'Suivi, statuts et bordereaux', view: viewOrders },
+    messages: { title: 'Messages', sub: 'Formulaire de contact et inscriptions à la newsletter', view: viewMessages },
     clients: { title: 'Clients', sub: 'Fiches, coordonnées et historique d’achat', view: viewCustomers },
     livraisons: { title: 'Livraisons', sub: 'Transporteurs, numéros de suivi et étiquettes', view: viewShipments },
     reductions: { title: 'Réductions', sub: 'Codes promotionnels, avantages et conditions', view: viewDiscounts },
@@ -1287,6 +1423,7 @@
     setBadge('#badge-stock', state.stats.lowStock + state.stats.outOfStock);
     setBadge('#badge-orders', state.stats.toPrepare);
     setBadge('#badge-ship', state.stats.inTransit);
+    setBadge('#badge-messages', state.stats.newMessages || 0);
     setBadge('#badge-discounts', (state.discounts || []).filter(function (d) {
       return d.active;
     }).length);
@@ -1410,6 +1547,30 @@
       b.addEventListener('click', function () { shipmentForm(null, b.getAttribute('data-ship-new')); });
     });
 
+    /* Messages */
+    $$('[data-message-open]').forEach(function (b) {
+      b.addEventListener('click', function () { messageDetail(b.getAttribute('data-message-open')); });
+    });
+    $$('[data-message-delete]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var message = messageById(b.getAttribute('data-message-delete'));
+        confirmAction('Supprimer le message de ' + (message.name || message.email) + ' ?',
+          'Supprimer', function () {
+            send('messages/delete', { id: message.id }, 'Message supprimé.');
+          });
+      });
+    });
+
+    var exportMessages = $('#export-messages');
+    if (exportMessages) {
+      exportMessages.addEventListener('click', function () {
+        download('messages.csv', [['Reçu le', 'Formulaire', 'Nom', 'E-mail', 'Téléphone', 'Statut', 'Message']]
+          .concat((state.messages || []).map(function (m) {
+            return [m.createdAt, MESSAGE_KINDS[m.kind] || m.kind, m.name, m.email, m.phone, m.status, m.message];
+          })));
+      });
+    }
+
     /* Clients */
     $$('[data-customer-edit]').forEach(function (b) {
       b.addEventListener('click', function () { customerForm(b.getAttribute('data-customer-edit')); });
@@ -1436,15 +1597,15 @@
     });
 
     /* Codes de réduction */
-    $('[data-discount-edit]').forEach(function (b) {
+    $$('[data-discount-edit]').forEach(function (b) {
       b.addEventListener('click', function () { discountForm(b.getAttribute('data-discount-edit')); });
     });
-    $('[data-discount-toggle]').forEach(function (b) {
+    $$('[data-discount-toggle]').forEach(function (b) {
       b.addEventListener('click', function () {
         send('discounts/toggle', { id: b.getAttribute('data-discount-toggle') }, 'Code mis à jour.');
       });
     });
-    $('[data-discount-delete]').forEach(function (b) {
+    $$('[data-discount-delete]').forEach(function (b) {
       b.addEventListener('click', function () {
         var discount = discountById(b.getAttribute('data-discount-delete'));
         confirmAction('Supprimer le code ' + discount.code + ' ?', 'Supprimer', function () {

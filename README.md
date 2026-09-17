@@ -195,6 +195,12 @@ totaux, paiement et statut. Le statut se change depuis la liste. Créer une
 commande décrémente le stock, l'annuler le recrédite. Fiche détaillée avec les
 lignes, l'adresse et l'expédition liée.
 
+**Messages** — ce que la boutique reçoit : envois du formulaire de contact et
+inscriptions à la newsletter. Recherche, filtre par formulaire et par statut,
+export CSV. Ouvrir un message le marque comme lu ; il passe ensuite en Traité
+ou en Archivé. Le bouton **Répondre par e-mail** ouvre le client de messagerie
+avec l'objet déjà rempli. Le compteur du menu indique les messages non lus.
+
 **Clients** — fiche complète avec coordonnées, adresse de livraison et notes
 internes, plus le nombre de commandes et le total dépensé. Un client rattaché à
 une commande ne peut pas être supprimé par mégarde.
@@ -335,10 +341,28 @@ Le fournisseur se règle dans `data/site.json`, sous `analytics` :
 ## Formulaires
 
 La newsletter et la page Contact postent leur contenu en JSON à l'adresse
-indiquée dans `data/site.json`, sous `forms.endpoint`. Tant que ce champ est
-vide, **rien n'est envoyé** : le formulaire le dit et renvoie vers l'adresse
-e-mail de la boutique plutôt que d'afficher une confirmation qui n'en serait
-pas une.
+indiquée dans `data/site.json`, sous `forms.endpoint`. Par défaut c'est
+`/api/contact`, la route du serveur local : l'envoi atterrit dans la rubrique
+**Messages** du back-office.
+
+C'est la seule route ouverte sans session — c'est le visiteur qui écrit, il n'a
+pas de compte. Elle est tenue de près : en-tête `X-Requested-With` exigé, ce qui
+écarte les envois venus d'un formulaire hébergé ailleurs ; adresse e-mail
+vérifiée ; champs coupés à une longueur raisonnable ; cinq envois par adresse IP
+toutes les dix minutes ; et le même formulaire renvoyé deux fois en moins d'une
+minute ne crée qu'une entrée. Le texte reçu est rangé tel quel et affiché comme
+du texte, jamais interprété.
+
+Si `forms.endpoint` est vide, **rien n'est envoyé** : le formulaire le dit et
+renvoie vers l'adresse e-mail de la boutique plutôt que d'afficher une
+confirmation qui n'en serait pas une.
+
+**En ligne, cette route n'existe pas.** Vercel sert la boutique statique, pas le
+serveur Node, et son système de fichiers est en lecture seule : un envoi depuis
+le site déployé échoue et le formulaire affiche l'adresse e-mail de repli. La
+boîte Messages ne se remplit donc que sur `node server.js`. Pour recevoir les
+messages en ligne, il faut une fonction serveur et un stockage qui lui survive,
+ou un service de formulaires dont l'adresse est mise dans `forms.endpoint`.
 
 ## Icônes
 
