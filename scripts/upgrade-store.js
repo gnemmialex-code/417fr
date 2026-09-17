@@ -369,10 +369,18 @@ const result = store.update((data) => {
     }
     if (product.visible === undefined) product.visible = true;
 
-    /* Vignette affichée en haut à gauche de la carte produit.
-       Par défaut on reproduit le comportement d'origine : « Épuisé » en rupture. */
+    /* Vignette affichée en haut à gauche de la carte produit. Par défaut
+       elle annonce le retour d'un article sans stock plutôt que sa rupture. */
     if (!product.badge) {
-      product.badge = { enabled: true, text: 'Épuisé', when: 'out-of-stock', tone: 'sombre' };
+      product.badge = { enabled: true, text: 'En arrivage', when: 'incoming', tone: 'accent' };
+    }
+    /* Reprise des fiches d'avant les trois états : « always » n'existe plus,
+       et l'ancienne vignette « Épuisé » posée par défaut sur toutes les fiches
+       devient « En arrivage ». Une vignette personnalisée n'est pas touchée. */
+    if (product.badge.when === 'always') product.badge.when = 'out-of-stock';
+    if (product.badge.text === 'Épuisé' && product.badge.when === 'out-of-stock'
+      && product.badge.tone === 'sombre') {
+      product.badge = { enabled: product.badge.enabled, text: 'En arrivage', when: 'incoming', tone: 'accent' };
     }
     /* Statut interne, visible uniquement dans le back-office. */
     if (!product.status) product.status = 'Automatique';
@@ -386,6 +394,15 @@ const result = store.update((data) => {
   if (!data.content) data.content = content;
   else Object.keys(content).forEach((key) => {
     if (data.content[key] === undefined) data.content[key] = content[key];
+  });
+
+  /* Les pays enregistrés avant la détection automatique n'ont ni code ISO ni
+     langue : on les complète depuis le catalogue versionné, par nom. */
+  const reference = new Map(site.countries.map((c) => [c.name, c]));
+  data.content.countries = (data.content.countries || site.countries).map((country) => {
+    const known = reference.get(country.name);
+    if (!known) return country;
+    return Object.assign({}, country, { code: known.code, lang: known.lang });
   });
 
   /* La liste des codes existe toujours. Les codes fournis sont ajoutés une

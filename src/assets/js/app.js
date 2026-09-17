@@ -28,8 +28,6 @@
     return Array.prototype.slice.call((scope || document).querySelectorAll(selector));
   }
 
-  function money(value) { return '€' + Number(value).toFixed(2).replace('.', ','); }
-
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -47,6 +45,291 @@
 
   function writeJson(key, value) {
     try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (err) { /* ignoré */ }
+  }
+
+  /* ---------- Langue, pays et devise ---------- */
+
+  /* Le site est écrit en français et facturé en euros. Ce module choisit tout
+     seul, à la première visite, la langue et la devise à présenter : il lit la
+     configuration du navigateur, jamais l'adresse IP, et ne contacte aucun
+     service tiers. Le choix reste modifiable et se retient. */
+
+  var localeSettings = window.SITE_LOCALE || {};
+  var CURRENCIES = localeSettings.currencies || { EUR: { symbol: '€', rate: 1, locale: 'fr-FR' } };
+  var COUNTRIES = localeSettings.countries || [];
+  var BASE_CURRENCY = localeSettings.baseCurrency || 'EUR';
+  var SOURCE_LOCALE = localeSettings.defaultLocale || 'fr';
+  var LOCALES = [SOURCE_LOCALE].concat(localeSettings.translated || []);
+
+  /* Fuseaux horaires des pays desservis. C'est le renseignement de position le
+     plus fiable que donne un navigateur, et il ne coûte aucune requête. */
+  var TIMEZONE_COUNTRIES = {
+    'Europe/Paris': 'FR', 'Europe/Brussels': 'BE', 'Europe/Luxembourg': 'LU',
+    'Europe/Zurich': 'CH', 'Europe/Busingen': 'DE', 'Europe/Berlin': 'DE',
+    'Europe/Madrid': 'ES', 'Atlantic/Canary': 'ES', 'Europe/Rome': 'IT',
+    'Europe/Lisbon': 'PT', 'Atlantic/Madeira': 'PT', 'Europe/London': 'GB',
+    'Asia/Jerusalem': 'IL', 'Asia/Tel_Aviv': 'IL'
+  };
+
+  function countryByCode(code) {
+    if (!code) return null;
+    for (var i = 0; i < COUNTRIES.length; i += 1) {
+      if (COUNTRIES[i].code === code) return COUNTRIES[i];
+    }
+    return null;
+  }
+
+  function countryByName(name) {
+    if (!name) return null;
+    for (var i = 0; i < COUNTRIES.length; i += 1) {
+      if (COUNTRIES[i].name === name) return COUNTRIES[i];
+    }
+    return null;
+  }
+
+  function browserLanguages() {
+    var list = navigator.languages && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language || ''];
+    return Array.prototype.slice.call(list).filter(Boolean).map(String);
+  }
+
+  /* Le pays vient d'abord de la langue régionalisée du navigateur (fr-BE,
+     en-GB), puis du fuseau horaire. Faute des deux, on ne devine pas. */
+  function detectCountry() {
+    var langs = browserLanguages();
+    for (var i = 0; i < langs.length; i += 1) {
+      var parts = langs[i].replace('_', '-').split('-');
+      var area = parts.length > 1 ? parts[parts.length - 1].toUpperCase() : '';
+      if (area.length === 2 && countryByCode(area)) return countryByCode(area);
+    }
+    try {
+      var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (TIMEZONE_COUNTRIES[zone]) return countryByCode(TIMEZONE_COUNTRIES[zone]);
+    } catch (err) { /* Intl absent : on s'en passe */ }
+    return null;
+  }
+
+  /* Première langue du navigateur que le site sait parler. */
+  function detectLanguage() {
+    var langs = browserLanguages();
+    for (var i = 0; i < langs.length; i += 1) {
+      var base = langs[i].slice(0, 2).toLowerCase();
+      if (LOCALES.indexOf(base) !== -1) return base;
+    }
+    return '';
+  }
+
+  function detectRegion() {
+    var country = detectCountry();
+    var lang = detectLanguage() || (country && country.lang) || SOURCE_LOCALE;
+    return {
+      country: country ? country.name : (localeSettings.defaultCountry || ''),
+      code: country ? country.code : '',
+      currency: country && CURRENCIES[country.currency] ? country.currency : BASE_CURRENCY,
+      lang: LOCALES.indexOf(lang) !== -1 ? lang : SOURCE_LOCALE,
+      langChosen: false,
+      auto: true
+    };
+  }
+
+  /* Le choix enregistré prime sur la détection. Les visites d'avant ne
+     retenaient qu'un nom de pays et une devise : on les complète. */
+  function storedRegion() {
+    var saved = readJson(REGION_KEY, null);
+    if (!saved) return null;
+    var name = saved.country || saved.name;
+    var known = countryByName(name);
+    return {
+      country: known ? known.name : name,
+      code: known ? known.code : (saved.code || ''),
+      currency: CURRENCIES[saved.currency] ? saved.currency : BASE_CURRENCY,
+      lang: LOCALES.indexOf(saved.lang) !== -1 ? saved.lang : ((known && known.lang) || SOURCE_LOCALE),
+      langChosen: !!saved.langChosen,
+      auto: false
+    };
+  }
+
+  var region = storedRegion() || detectRegion();
+
+  function currencyDef() {
+    return CURRENCIES[region.currency] || CURRENCIES[BASE_CURRENCY]
+      || { symbol: '€', rate: 1, locale: 'fr-FR' };
+  }
+
+  /* Un montant exprimé dans la devise de base, rendu dans celle du visiteur.
+     En euros on garde la typographie du site, celle que le générateur a déjà
+     écrite dans la page : le symbole devant, la virgule décimale. Dans une
+     autre devise, c'est le format du pays qui fait foi. */
+  function money(value) {
+    var def = currencyDef();
+    var code = CURRENCIES[region.currency] ? region.currency : BASE_CURRENCY;
+    var amount = Number(value || 0) * (Number(def.rate) || 1);
+    if (code === BASE_CURRENCY) return def.symbol + amount.toFixed(2).replace('.', ',');
+    try {
+      return new Intl.NumberFormat(def.locale, { style: 'currency', currency: code }).format(amount);
+    } catch (err) {
+      return def.symbol + ' ' + amount.toFixed(2).replace('.', ',');
+    }
+  }
+
+  /* Les prix posés par le générateur portent leur montant en attribut : il
+     suffit de les réécrire. Tant que le visiteur reste en euros, la page est
+     déjà juste et on ne la touche pas. */
+  var pricesRewritten = false;
+
+  function refreshPrices(scope) {
+    var base = region.currency === BASE_CURRENCY;
+    if (base && !pricesRewritten) return;
+    $$('[data-amount]', scope || document).forEach(function (el) {
+      el.textContent = money(el.getAttribute('data-amount'));
+    });
+    pricesRewritten = !base;
+  }
+
+  /* ---------- Traductions ---------- */
+
+  var TRANSLATED_ATTRS = ['aria-label', 'placeholder', 'title', 'alt'];
+  var UNTRANSLATED_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1 };
+
+  var dictionaries = {};
+  var dictionary = {};
+  var patterns = [];
+
+  /* Un libellé qui contient un nom de produit ou un nombre ne peut pas tenir
+     dans une table de correspondances : il passe par une expression, et les
+     groupes capturés sont replacés dans la traduction. */
+  function buildPatterns(data) {
+    return (data._patterns || []).map(function (entry) {
+      return { from: new RegExp(entry[0]), to: entry[1] };
+    });
+  }
+
+  function tr(text) {
+    var key = String(text);
+    var value = dictionary[key];
+    if (value !== undefined) return value;
+    for (var i = 0; i < patterns.length; i += 1) {
+      if (patterns[i].from.test(key)) return key.replace(patterns[i].from, patterns[i].to);
+    }
+    return text;
+  }
+
+  function loadDictionary(lang) {
+    if (lang === SOURCE_LOCALE) {
+      dictionary = {};
+      patterns = [];
+      return Promise.resolve();
+    }
+    if (dictionaries[lang]) {
+      dictionary = dictionaries[lang];
+      patterns = buildPatterns(dictionary);
+      return Promise.resolve();
+    }
+    /* L'empreinte du dictionnaire est dans l'adresse : le navigateur peut le
+       garder longtemps sans jamais servir une version perimee. */
+    var stamp = localeSettings.version ? '?v=' + encodeURIComponent(localeSettings.version) : '';
+    return fetch('/assets/i18n/' + encodeURIComponent(lang) + '.json' + stamp)
+      .then(function (response) { return response.ok ? response.json() : {}; })
+      .catch(function () { return {}; })
+      .then(function (data) {
+        dictionaries[lang] = data;
+        dictionary = data;
+        patterns = buildPatterns(data);
+      });
+  }
+
+  /* Le texte français d'origine est gardé sur le nœud : revenir au français,
+     ou changer de langue une deuxième fois, repart toujours de la source. */
+  function translateTextNode(node) {
+    if (node.i18nSource === undefined) node.i18nSource = node.nodeValue;
+    var source = node.i18nSource;
+    var key = source.trim();
+    if (!key) return;
+    var value = tr(key);
+    if (value === key) {
+      if (node.nodeValue !== source) node.nodeValue = source;
+      return;
+    }
+    node.nodeValue = source.replace(key, function () { return value; });
+  }
+
+  function translateAttributes(el) {
+    if (!el.i18nAttrs) {
+      el.i18nAttrs = {};
+      TRANSLATED_ATTRS.forEach(function (name) {
+        if (el.hasAttribute(name)) el.i18nAttrs[name] = el.getAttribute(name);
+      });
+    }
+    Object.keys(el.i18nAttrs).forEach(function (name) {
+      var source = el.i18nAttrs[name];
+      var translated = tr(source.trim());
+      el.setAttribute(name, source.replace(source.trim(), function () { return translated; }));
+    });
+  }
+
+  function translate(root) {
+    var scope = root || document.body;
+    if (!scope) return;
+    var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) {
+      var node = walker.currentNode;
+      if (!node.parentNode || UNTRANSLATED_TAGS[node.parentNode.nodeName]) continue;
+      nodes.push(node);
+    }
+    nodes.forEach(translateTextNode);
+    $$('[aria-label],[placeholder],[title],[alt]', scope).forEach(translateAttributes);
+  }
+
+  /* Ce qui a été posé par du script plutôt que par le générateur : panier,
+     résultats de recherche, compteurs. */
+  var onLocaleChange = [];
+
+  function localized(fragment) {
+    if (needsTranslation()) translate(fragment);
+    refreshPrices(fragment);
+  }
+
+  /* En français rien n'est remplacé : inutile de parcourir la page, sauf si
+     une autre langue y est déjà passée et qu'il faut revenir à la source. */
+  var translatedOnce = false;
+
+  function needsTranslation() {
+    return translatedOnce || region.lang !== SOURCE_LOCALE;
+  }
+
+  function applyLocale() {
+    document.documentElement.lang = region.lang;
+    return loadDictionary(region.lang).then(function () {
+      if (needsTranslation()) {
+        translate(document.body);
+        translatedOnce = true;
+      }
+      refreshPrices();
+      onLocaleChange.forEach(function (fn) { fn(); });
+    });
+  }
+
+  /* Choisir un pays entraîne la langue qui s'y parle, tant que le visiteur
+     n'a pas désigné la sienne. Une fois qu'il l'a fait, changer de pays ne
+     change plus que la devise. */
+  function setRegion(patch) {
+    var chosen = patch.lang !== undefined;
+    var lang = region.lang;
+    if (chosen) lang = patch.lang;
+    else if (patch.suggestedLang && !region.langChosen) lang = patch.suggestedLang;
+
+    region = {
+      country: patch.country !== undefined ? patch.country : region.country,
+      code: patch.code !== undefined ? patch.code : region.code,
+      currency: patch.currency !== undefined ? patch.currency : region.currency,
+      lang: LOCALES.indexOf(lang) !== -1 ? lang : SOURCE_LOCALE,
+      langChosen: region.langChosen || chosen,
+      auto: false
+    };
+    writeJson(REGION_KEY, region);
+    return applyLocale();
   }
 
   document.documentElement.style.setProperty(
@@ -492,7 +775,7 @@
     var product = productByHandle(handle);
     if (!product) return;
     if (!product.available) {
-      toast('Ce produit est actuellement épuisé.');
+      toast(tr('Ce produit est actuellement épuisé.'));
       return;
     }
     var qty = quantity || 1;
@@ -503,7 +786,7 @@
 
     saveCart();
     flashButton(button);
-    toast(product.title + ' ajouté au panier.');
+    toast(product.title + tr(' ajouté au panier.'));
     window.setTimeout(function () { openDrawer('cart', button); }, 280);
   }
 
@@ -523,7 +806,7 @@
       el.hidden = count === 0;
     });
     $$('[data-cart-count-label]').forEach(function (el) {
-      el.textContent = 'Nombre total d’articles dans le panier : ' + count;
+      el.textContent = tr('Nombre total d’articles dans le panier :') + ' ' + count;
     });
 
     var body = $('[data-cart-body]');
@@ -537,6 +820,7 @@
         + '<p>Votre panier est vide</p>'
         + '<a class="btn btn--outline" href="/collections/tout-nos-produits">Découvrir nos soins</a>'
         + '</div>';
+      localized(body);
       if (foot) foot.hidden = true;
       return;
     }
@@ -561,6 +845,7 @@
     });
     html += '</ul>';
     body.innerHTML = html;
+    localized(body);
 
     if (foot) {
       foot.hidden = false;
@@ -587,13 +872,14 @@
       $('[data-cart-progress] i', foot).style.width =
         Math.min(100, threshold ? (subtotal / threshold) * 100 : 100) + '%';
       $('[data-cart-shipping]', foot).textContent = freeShipping || remaining <= 0
-        ? 'Livraison offerte : c’est acquis.'
-        : 'Plus que ' + money(remaining) + ' pour la livraison offerte.';
+        ? tr('Livraison offerte : c’est acquis.')
+        : tr('Plus que') + ' ' + money(remaining) + ' ' + tr('pour la livraison offerte.');
 
       /* Détail : sous-total, puis une ligne par réduction retenue. */
       var sums = $('[data-cart-sums]', foot);
       if (sums) {
-        var rows = '<div class="cart-sum"><span>Sous-total</span><span>' + money(subtotal) + '</span></div>';
+        var rows = '<div class="cart-sum"><span>' + escapeHtml(tr('Sous-total')) + '</span><span>'
+          + money(subtotal) + '</span></div>';
 
         /* Une ligne par remise chiffrée. */
         kept.forEach(function (d) {
@@ -605,8 +891,8 @@
         /* La livraison figure toujours : c'est ce qui rend la réduction
            « livraison offerte » lisible dans le prix final. */
         rows += '<div class="cart-sum' + (freeShipping ? ' cart-sum--off' : '') + '">'
-          + '<span>Livraison</span><span>'
-          + (freeShipping ? 'Offerte' : money(shippingCost)) + '</span></div>';
+          + '<span>' + escapeHtml(tr('Livraison')) + '</span><span>'
+          + (freeShipping ? escapeHtml(tr('Offerte')) : money(shippingCost)) + '</span></div>';
 
         sums.innerHTML = rows;
       }
@@ -617,7 +903,7 @@
         var found = findByCode(appliedCode);
         note.classList.remove('is-ok');
         if (attempted && !findByCode(attempted)) {
-          note.innerHTML = 'Code inconnu ou plus valable.';
+          note.innerHTML = escapeHtml(tr('Code inconnu ou plus valable.'));
         } else if (appliedCode && found && subtotal < (found.min || 0)) {
           note.innerHTML = 'Code ' + escapeHtml(appliedCode) + ' enregistré : il s’applique dès '
             + money(found.min) + ' d’achat.';
@@ -1139,16 +1425,14 @@
 
     var cards = $$('[data-card]', grid);
     var sortSelect = $('[data-sort]');
-    var chips = $$('[data-availability]');
+    var chips = $$('[data-filter-availability]');
     var countEl = $('[data-collection-count]');
     var availability = 'all';
 
     function apply() {
       var visible = cards.filter(function (card) {
-        var available = card.getAttribute('data-available') === 'true';
-        var keep = availability === 'all'
-          || (availability === 'in' && available)
-          || (availability === 'out' && !available);
+        var state = card.getAttribute('data-availability') || 'out-of-stock';
+        var keep = availability === 'all' || availability === state;
         card.hidden = !keep;
         return keep;
       });
@@ -1172,7 +1456,9 @@
       }
       sorted.forEach(function (card) { grid.appendChild(card); });
 
-      if (countEl) countEl.textContent = visible.length + (visible.length > 1 ? ' soins' : ' soin');
+      if (countEl) {
+        countEl.textContent = visible.length + ' ' + tr(visible.length > 1 ? 'soins' : 'soin');
+      }
       var empty = $('[data-collection-empty]');
       if (empty) empty.hidden = visible.length > 0;
     }
@@ -1194,50 +1480,223 @@
         chips.forEach(function (c) { c.classList.remove('is-active'); c.setAttribute('aria-pressed', 'false'); });
         chip.classList.add('is-active');
         chip.setAttribute('aria-pressed', 'true');
-        availability = chip.getAttribute('data-availability');
+        availability = chip.getAttribute('data-filter-availability');
         animateApply();
       });
     });
 
     if (sortSelect) sortSelect.addEventListener('change', animateApply);
+    onLocaleChange.push(apply);
     apply();
   }
 
   /* ---------- Sélecteur de région ---------- */
 
   function initRegion() {
-    var saved = readJson(REGION_KEY, null);
-    if (saved) $$('[data-region-label]').forEach(function (el) { el.textContent = saved.currency; });
+    onLocaleChange.push(renderCart);
+
+    function paint() {
+      $$('[data-region-label]').forEach(function (el) { el.textContent = region.currency; });
+
+      $$('[data-region]').forEach(function (button) {
+        var on = button.getAttribute('data-region') === region.country;
+        button.classList.toggle('is-active', on);
+        button.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+
+      $$('[data-lang-choice]').forEach(function (button) {
+        var on = button.getAttribute('data-lang-choice') === region.lang;
+        button.classList.toggle('is-active', on);
+        button.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+
+      /* Dit au visiteur ce qui a été choisi pour lui, et que rien n'est figé. */
+      $$('[data-region-auto]').forEach(function (el) {
+        el.hidden = !region.auto;
+        if (region.auto) {
+          el.textContent = tr('Choisi d’après les réglages de votre navigateur. Vous pouvez en changer.');
+        }
+      });
+    }
 
     $$('[data-region]').forEach(function (button) {
-      if (saved && button.getAttribute('data-region') === saved.name) button.classList.add('is-active');
       button.addEventListener('click', function () {
-        var region = {
-          name: button.getAttribute('data-region'),
-          currency: button.getAttribute('data-currency')
-        };
-        writeJson(REGION_KEY, region);
-        $$('[data-region]').forEach(function (b) { b.classList.remove('is-active'); });
-        button.classList.add('is-active');
-        $$('[data-region-label]').forEach(function (el) { el.textContent = region.currency; });
-        toast('Région : ' + region.name + ' (' + region.currency + ')');
-        closeAllDrawers();
+        setRegion({
+          country: button.getAttribute('data-region'),
+          code: button.getAttribute('data-country'),
+          currency: button.getAttribute('data-currency'),
+          suggestedLang: button.getAttribute('data-lang')
+        }).then(function () {
+          paint();
+          toast(region.country + ' · ' + region.currency);
+          closeAllDrawers();
+        });
       });
     });
+
+    $$('[data-lang-choice]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        setRegion({ lang: button.getAttribute('data-lang-choice') }).then(paint);
+      });
+    });
+
+    onLocaleChange.push(paint);
+    applyLocale().then(paint);
   }
 
-  /* ---------- Formulaires de démonstration ---------- */
+  /* ---------- Consentement et mesure d'audience ---------- */
+
+  /* Aucun script de mesure n'est chargé par la page. Il n'arrive qu'après un
+     accord explicite, et l'accord est redemandé au bout de six mois. */
+
+  var CONSENT_KEY = '417france.consent';
+  var CONSENT_MAX_AGE = 6 * 30 * 24 * 60 * 60 * 1000;
+
+  function storedConsent() {
+    var saved = readJson(CONSENT_KEY, null);
+    if (!saved || !saved.state || !saved.at) return null;
+    if (Date.now() - saved.at > CONSENT_MAX_AGE) return null;
+    return saved.state;
+  }
+
+  var analyticsStarted = false;
+
+  /* Chaque fournisseur a sa façon de démarrer. Sans réglage exploitable, on ne
+     charge rien du tout plutôt que de poser un script inerte. */
+  function startAnalytics() {
+    if (analyticsStarted) return;
+    var settings = window.SITE_ANALYTICS || {};
+    var src = '';
+    var attributes = {};
+    var after = null;
+
+    if (settings.provider === 'vercel') {
+      src = '/_vercel/insights/script.js';
+    } else if (settings.provider === 'plausible' && settings.id) {
+      src = 'https://plausible.io/js/script.js';
+      attributes['data-domain'] = settings.id;
+    } else if (settings.provider === 'ga4' && settings.id) {
+      src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(settings.id);
+      after = function () {
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { window.dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', settings.id, { anonymize_ip: true });
+      };
+    }
+
+    if (!src) return;
+    analyticsStarted = true;
+
+    var script = document.createElement('script');
+    script.defer = true;
+    script.src = src;
+    Object.keys(attributes).forEach(function (name) {
+      script.setAttribute(name, attributes[name]);
+    });
+    if (after) script.addEventListener('load', after);
+    document.head.appendChild(script);
+  }
+
+  function initConsent() {
+    var banner = $('[data-consent]');
+    var settings = window.SITE_ANALYTICS || {};
+    var measurable = settings.provider && settings.provider !== 'none';
+    var state = storedConsent();
+
+    if (state === 'granted') startAnalytics();
+
+    function show() {
+      if (!banner) return;
+      banner.hidden = false;
+      var accept = $('[data-consent-answer="granted"]', banner);
+      if (accept) accept.focus();
+    }
+
+    function answer(next) {
+      writeJson(CONSENT_KEY, { state: next, at: Date.now() });
+      if (next === 'granted') startAnalytics();
+      if (banner) banner.hidden = true;
+      toast(next === 'granted'
+        ? tr('Mesure d’audience activée.')
+        : tr('Mesure d’audience désactivée.'));
+    }
+
+    if (banner) {
+      $$('[data-consent-answer]', banner).forEach(function (button) {
+        button.addEventListener('click', function () {
+          answer(button.getAttribute('data-consent-answer'));
+        });
+      });
+    }
+
+    /* Le lien du pied de page rouvre la bannière, que la réponse date d'hier
+       ou de six mois. */
+    $$('[data-consent-reopen]').forEach(function (button) {
+      button.addEventListener('click', show);
+    });
+
+    /* Rien à mesurer, rien à demander. */
+    if (measurable && state === null) show();
+  }
+
+  /* ---------- Formulaires ---------- */
+
+  /* Newsletter et page Contact. Avec un point de collecte configuré, la
+     saisie y est postée et le visiteur voit ce qui s'est réellement passé.
+     Sans configuration, on ne prétend pas avoir transmis quoi que ce soit :
+     on donne l'adresse à laquelle écrire. */
 
   function initForms() {
-    $$('[data-demo-form]').forEach(function (form) {
+    var forms = window.SITE_FORMS || {};
+
+    $$('[data-site-form]').forEach(function (form) {
+      var note = $('[data-form-note]', form) || $('[data-form-note]', form.parentNode);
+      var submit = form.querySelector('[type="submit"]');
+
+      function say(message, ok) {
+        if (!note) return;
+        note.textContent = message;
+        note.classList.toggle('is-success', !!ok);
+      }
+
       form.addEventListener('submit', function (event) {
         event.preventDefault();
-        var note = $('[data-form-note]', form) || $('[data-form-note]', form.parentNode);
-        if (note) {
-          note.textContent = form.getAttribute('data-success') || 'Merci, votre message a bien été envoyé.';
-          note.classList.add('is-success');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
         }
-        form.reset();
+
+        if (!forms.endpoint) {
+          say(forms.email
+            ? tr('Formulaire non relié pour l’instant. Écrivez-nous à') + ' ' + forms.email
+            : tr('Formulaire non relié pour l’instant.'), false);
+          return;
+        }
+
+        var payload = { sujet: form.getAttribute('data-site-form') };
+        $$('input, textarea, select', form).forEach(function (field) {
+          if (field.name) payload[field.name] = field.value;
+        });
+
+        if (submit) submit.disabled = true;
+        say(tr('Envoi en cours…'), false);
+
+        fetch(forms.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(function (response) {
+          if (!response.ok) throw new Error(response.status);
+          say(form.getAttribute('data-success') || tr('Merci, c’est enregistré.'), true);
+          form.reset();
+        }).catch(function () {
+          say(forms.email
+            ? tr('L’envoi a échoué. Écrivez-nous à') + ' ' + forms.email
+            : tr('L’envoi a échoué. Merci de réessayer.'), false);
+        }).then(function () {
+          if (submit) submit.disabled = false;
+        });
       });
     });
   }
@@ -1276,6 +1735,7 @@
   initSearch();
   initCollection();
   initRegion();
+  initConsent();
   initForms();
   initToTop();
   initCartCode();

@@ -149,41 +149,45 @@
 
   /* ---------- Fragments réutilisables ---------- */
 
-  function stockTag(product) {
-    if (product.stock <= 0) return '<span class="tag tag--danger">Rupture</span>';
-    if (product.stock <= product.threshold) return '<span class="tag tag--warn">Stock faible</span>';
-    return '<span class="tag tag--ok">En stock</span>';
-  }
-
-  /* Le statut interne prend le pas sur l'etat calcule, dans le back-office seulement. */
-  function statusTag(product) {
-    if (product.status && product.status !== 'Automatique') {
-      var tones = {
-        'En reapprovisionnement': 'tag--info',
-        'En réapprovisionnement': 'tag--info',
-        'Bientot disponible': 'tag--info',
-        'Bientôt disponible': 'tag--info',
-        'Nouveaute': 'tag--ok',
-        'Nouveauté': 'tag--ok',
-        'Arrete': 'tag--neutral',
-        'Arrêté': 'tag--neutral'
-      };
-      return '<span class="tag ' + (tones[product.status] || 'tag--neutral') + '">'
-        + esc(product.status) + '</span>';
-    }
-    return stockTag(product);
-  }
-
-  var BADGE_WHEN_LABELS = {
-    'always': 'toujours',
-    'in-stock': 'en stock',
-    'out-of-stock': 'en rupture'
+  /* Les trois etats d'un produit en boutique. Le meme vocabulaire sert au
+     filtre des pages collection et a la condition d'affichage de la vignette. */
+  var AVAILABILITY_LABELS = {
+    'in-stock': 'En stock',
+    'out-of-stock': 'Épuisé',
+    'incoming': 'En arrivage'
   };
+
+  var AVAILABILITY_TONES = {
+    'in-stock': 'tag--ok',
+    'out-of-stock': 'tag--danger',
+    'incoming': 'tag--info'
+  };
+
+  function availabilityOf(product) {
+    return product.availability || (product.stock > 0 ? 'in-stock' : 'out-of-stock');
+  }
+
+  /* Ce que le tableau ajoute sous l'etat boutique : l'alerte de stock et le
+     statut interne, quand ils apportent une information de plus. */
+  function stockNote(product) {
+    var notes = [];
+    if (product.stock > 0 && product.stock <= product.threshold) notes.push('stock faible');
+    if (product.status && product.status !== 'Automatique') notes.push(product.status.toLowerCase());
+    if (!notes.length) return '';
+    return '<br><span class="cell-sub">' + esc(notes.join(' · ')) + '</span>';
+  }
+
+  function availabilityTag(product) {
+    var state = availabilityOf(product);
+    return '<span class="tag ' + (AVAILABILITY_TONES[state] || 'tag--neutral') + '">'
+      + esc(AVAILABILITY_LABELS[state] || state) + '</span>';
+  }
 
   function badgeSummary(product) {
     var badge = product.badge;
     if (!badge || !badge.enabled || !badge.text) return '<span class="cell-sub">Vignette masquee</span>';
-    return '<span class="cell-sub" title="Affichée ' + (BADGE_WHEN_LABELS[badge.when] || 'en rupture')
+    var when = AVAILABILITY_LABELS[badge.when] || AVAILABILITY_LABELS['out-of-stock'];
+    return '<span class="cell-sub" title="Affichée quand le produit est ' + esc(when.toLowerCase())
       + '">Vignette : ' + esc(badge.text) + '</span>';
   }
 
@@ -370,7 +374,7 @@
         + '</div>'
         + '<div class="stock-bar"><i class="' + barClass.trim() + '" style="width:' + ratio + '%"></i></div></td>'
         + '<td class="num">' + p.threshold + '</td>'
-        + '<td>' + statusTag(p) + '<br>' + badgeSummary(p) + '</td>'
+        + '<td>' + availabilityTag(p) + stockNote(p) + '<br>' + badgeSummary(p) + '</td>'
         + '<td class="num">' + money(p.stock * p.cost) + '</td>'
         + '<td><span class="cell-sub">' + esc(p.location || '—') + '</span></td>'
         + '<td class="num"><button type="button" class="toggle' + (p.visible === false ? '' : ' is-on')
@@ -796,6 +800,8 @@
     var images = p && p.images ? p.images.map(function (i) { return { src: i.src, alt: i.alt || '' }; }) : [];
     var sections = p && p.description ? p.description.map(function (d) { return { title: d.title, body: d.body }; }) : [];
     var badge = (p && p.badge) || { enabled: true, text: 'Épuisé', when: 'out-of-stock', tone: 'sombre' };
+    /* « always » vient des fiches d'avant les trois etats. */
+    var badgeWhen = AVAILABILITY_LABELS[badge.when] ? badge.when : 'out-of-stock';
 
     function imageRows() {
       return images.map(function (image, i) {
@@ -856,17 +862,20 @@
 
       + '<h3 class="form-title">Vignette et statut</h3>'
       + '<div class="grid-2">'
-      + '<div class="field"><label for="p-status">Statut interne (back-office)</label>'
+      + '<div class="field"><label for="p-status">Statut du produit</label>'
       + '<select id="p-status">' + state.productStatuses.map(function (s) {
         return '<option' + (p && p.status === s ? ' selected' : '') + '>' + esc(s) + '</option>';
-      }).join('') + '</select></div>'
+      }).join('') + '</select>'
+      + '<p class="field-hint">Un produit sans stock est annonce En arrivage sur la boutique. '
+      + 'Le statut Arrete le passe sur Epuise.</p></div>'
       + '<div class="field"><label for="p-badge-text">Texte de la vignette</label>'
       + '<input id="p-badge-text" value="' + esc(badge.text || '') + '" placeholder="Epuise, Nouveau, -20 %..."></div>'
-      + '<div class="field"><label for="p-badge-when">Afficher la vignette</label>'
+      + '<div class="field"><label for="p-badge-when">Afficher la vignette quand le produit est</label>'
       + '<select id="p-badge-when">'
-      + '<option value="out-of-stock"' + (badge.when === 'out-of-stock' ? ' selected' : '') + '>Seulement en rupture</option>'
-      + '<option value="in-stock"' + (badge.when === 'in-stock' ? ' selected' : '') + '>Seulement en stock</option>'
-      + '<option value="always"' + (badge.when === 'always' ? ' selected' : '') + '>Dans tous les cas</option>'
+      + ['in-stock', 'out-of-stock', 'incoming'].map(function (value) {
+        return '<option value="' + value + '"' + (badgeWhen === value ? ' selected' : '') + '>'
+          + AVAILABILITY_LABELS[value] + '</option>';
+      }).join('')
       + '</select></div>'
       + '<div class="field"><label for="p-badge-tone">Apparence</label>'
       + '<select id="p-badge-tone">'
@@ -877,7 +886,8 @@
       + '</div>'
       + '<label class="switch"><input type="checkbox" id="p-badge-on"' + (badge.enabled ? ' checked' : '') + '>'
       + '<span>Afficher la vignette en haut a gauche de la carte produit</span></label>'
-      + '<p class="field-hint">Sans vignette active, une etiquette Promotion apparait si un prix barre est renseigne.</p>'
+      + '<p class="field-hint">La vignette ne sort que pour l’etat choisi ci-dessus. '
+      + 'Sans vignette active, une etiquette Promotion apparait si un prix barre est renseigne.</p>'
 
       + '<h3 class="form-title">Images</h3>'
       + '<div class="repeat" id="image-list">' + imageRows() + '</div>'

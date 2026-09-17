@@ -34,51 +34,71 @@
   "countries": [
     {
       "name": "Allemagne",
+      "code": "DE",
+      "lang": "en",
       "currency": "EUR",
       "symbol": "€"
     },
     {
       "name": "Belgique",
+      "code": "BE",
+      "lang": "fr",
       "currency": "EUR",
       "symbol": "€"
     },
     {
       "name": "Espagne",
+      "code": "ES",
+      "lang": "en",
       "currency": "EUR",
       "symbol": "€"
     },
     {
       "name": "France",
+      "code": "FR",
+      "lang": "fr",
       "currency": "EUR",
       "symbol": "€"
     },
     {
       "name": "Israël",
+      "code": "IL",
+      "lang": "en",
       "currency": "ILS",
       "symbol": "₪"
     },
     {
       "name": "Italie",
+      "code": "IT",
+      "lang": "en",
       "currency": "EUR",
       "symbol": "€"
     },
     {
       "name": "Luxembourg",
+      "code": "LU",
+      "lang": "fr",
       "currency": "EUR",
       "symbol": "€"
     },
     {
       "name": "Portugal",
+      "code": "PT",
+      "lang": "en",
       "currency": "EUR",
       "symbol": "€"
     },
     {
       "name": "Royaume-Uni",
+      "code": "GB",
+      "lang": "en",
       "currency": "GBP",
       "symbol": "£"
     },
     {
       "name": "Suisse",
+      "code": "CH",
+      "lang": "fr",
       "currency": "CHF",
       "symbol": "CHF"
     }
@@ -268,6 +288,10 @@
     {
       "handle": "privacy-policy",
       "title": "Politique de confidentialité"
+    },
+    {
+      "handle": "cookie-policy",
+      "title": "Politique de cookies"
     },
     {
       "handle": "contact-information",
@@ -598,5 +622,48 @@
   "band": {
     "image": "/assets/img/860_mineral-aqua-perfection_infinite-motion_lifestyle2_result.webp",
     "title": "417 La fréquence de la peau"
+  },
+  "defaultCountry": "France",
+  "baseCurrency": "EUR",
+  "defaultLocale": "fr",
+  "locales": [
+    {
+      "code": "fr",
+      "label": "Français"
+    },
+    {
+      "code": "en",
+      "label": "English"
+    }
+  ],
+  "currencies": {
+    "EUR": {
+      "symbol": "€",
+      "rate": 1,
+      "locale": "fr-FR"
+    },
+    "GBP": {
+      "symbol": "£",
+      "rate": 0.85,
+      "locale": "en-GB"
+    },
+    "CHF": {
+      "symbol": "CHF",
+      "rate": 0.94,
+      "locale": "fr-CH"
+    },
+    "ILS": {
+      "symbol": "₪",
+      "rate": 4,
+      "locale": "he-IL"
+    }
+  },
+  "ratesUpdatedAt": "2026-09-17",
+  "analytics": {
+    "provider": "vercel",
+    "id": ""
+  },
+  "forms": {
+    "endpoint": ""
   }
 }

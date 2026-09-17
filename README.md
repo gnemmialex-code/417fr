@@ -80,15 +80,25 @@ poussant le dépôt, ce qui déclenche un nouveau build.
 | Produits | 19 | `/products/<handle>` |
 | Collections | 6 | `/collections/<handle>` |
 | Pages | 4 | `/pages/notre-histoire`, `/pages/livraison-et-retours`, `/pages/contact`, `/pages/store-locator` |
-| Politiques | 7 | `/policies/<handle>` |
+| Politiques | 8 | `/policies/<handle>` |
 | Recherche | 1 | `/search` |
 | Erreur | 1 | `/404.html` |
 
-Un `sitemap.xml` et un `robots.txt` sont également produits.
+Sont également produits : `sitemap.xml` daté et hiérarchisé, `robots.txt`,
+`site.webmanifest`, `favicon.ico`, et un dictionnaire de traduction par langue
+dans `/assets/i18n/`.
+
+Chaque page porte un titre et une description sous les limites d'affichage des
+moteurs, une URL canonique, les balises Open Graph et Twitter en adresses
+absolues, et le jeu d'icônes. Les données structurées couvrent l'organisation
+et la recherche interne sur l'accueil, le fil d'Ariane partout, la fiche
+produit avec son état de stock, et la FAQ de la page livraison.
 
 ## Direction artistique
 
-Fraunces pour les titres, Jost pour les textes. Fond os chaud plutôt que blanc
+Deux familles pour tout le projet, boutique et back-office compris : Fraunces
+pour les titres, Jost pour les textes. Aucune troisième police n'est chargée
+nulle part, pas même en monospace. Fond os chaud plutôt que blanc
 pur, encre brun-noir, sable et argile, accent minéral vert-bleu repris du
 packaging, or discret pour les surtitres. Photographies en pleine largeur,
 coins arrondis, filets fins, pas d'ombres lourdes.
@@ -120,16 +130,35 @@ référence, le prix, le prix barré, le prix d'achat, le stock, le seuil, la
 catégorie, le fournisseur, l'emplacement, le résumé, la visibilité, les images
 et chaque section de description.
 
+### Les trois états d'un produit
+
+Un produit est **En stock**, **En arrivage** ou **Épuisé**. L'état se déduit et
+ne se saisit pas :
+
+| Stock | Statut | État en boutique |
+| --- | --- | --- |
+| au-dessus de zéro | n'importe lequel | En stock |
+| zéro | Arrêté | Épuisé |
+| zéro | tout autre statut | En arrivage |
+
+Un article sans stock est donc annoncé comme à venir, ce qui est le cas
+courant ; seul « Arrêté » le déclare épuisé, puisque celui-là ne reviendra pas.
+
+Le même vocabulaire sert partout : la colonne État du tableau de stocks, le
+filtre en pastilles des pages collection (Tous, Disponibles, En arrivage), la
+phrase sous le prix de la fiche produit, le bouton d'achat, et la disponibilité
+déclarée aux moteurs de recherche.
+
 Deux réglages complètent la fiche :
 
 - **Vignette** affichée en haut à gauche de la carte produit. Elle s'active ou
-  se désactive, son texte est libre, et elle s'affiche seulement en rupture,
-  seulement en stock, ou dans tous les cas. Trois apparences : fond sombre,
-  fond clair, vert minéral. Sans vignette active, une étiquette « Promotion »
+  se désactive, son texte est libre, et elle sort pour un seul des trois
+  états : En stock, Épuisé ou En arrivage. Trois apparences : fond sombre, fond
+  clair, vert minéral. Sans vignette active, une étiquette « Promotion »
   apparaît si un prix barré est renseigné.
-- **Statut interne** : Automatique, En réapprovisionnement, Bientôt disponible,
-  Nouveauté ou Arrêté. Il s'affiche dans la colonne État du tableau et sert de
-  filtre, sans rien changer sur la boutique.
+- **Statut du produit** : Automatique, En réapprovisionnement, Bientôt
+  disponible, Nouveauté ou Arrêté. Il s'affiche sous l'état dans le tableau et
+  sert de filtre. Seul « Arrêté » change quelque chose en boutique.
 
 La colonne **Visible** du tableau porte un interrupteur : un clic retire le
 produit du site ou l'y remet, sans ouvrir la fiche. La ligne passe en grisé
@@ -224,7 +253,7 @@ dist/            Site généré (régénéré à chaque build)
   de l'écran.
 - Filtres en pastilles et tri par prix ou par nom sur les collections, barre
   d'outils collante.
-- Sélecteur de région et de devise (10 pays), mémorisé localement.
+- Sélecteur de langue, de pays et de devise, mémorisé localement.
 
 **Produit**
 
@@ -253,6 +282,71 @@ Focus visible sur tous les éléments interactifs, focus piégé et restitué da
 les tiroirs, fermeture à la touche « Échap », libellés masqués pour les lecteurs
 d'écran, lien d'évitement vers le contenu.
 
+## Langue et devise
+
+À la première visite, le site choisit seul ce qu'il présente. Il lit la
+configuration du navigateur — jamais l'adresse IP, aucun service tiers n'est
+appelé :
+
+1. le pays vient de la langue régionalisée du navigateur (`fr-BE`, `en-GB`),
+   sinon du fuseau horaire ;
+2. la langue est la première des langues du navigateur que le site sait
+   parler, sinon celle du pays trouvé ;
+3. la devise est celle du pays.
+
+Le tiroir « Région et devise » affiche ce qui a été retenu et permet d'en
+changer. Choisir un pays entraîne la langue qui s'y parle, jusqu'à ce que le
+visiteur désigne lui-même la sienne : à partir de là, changer de pays ne touche
+plus que la devise. Le choix est retenu dans le navigateur.
+
+**Devises.** Les taux vivent dans `data/site.json`, sous `currencies`, avec la
+date de leur dernier relevé dans `ratesUpdatedAt`. Ce sont des conversions
+d'affichage : la commande reste facturée en euros, et le tiroir le dit. En
+euros, les prix gardent la typographie du site ; dans une autre devise, c'est
+le format du pays qui s'applique.
+
+**Traductions.** `data/i18n.json` associe une chaîne française rendue dans la
+page à sa traduction. Le générateur en fait un fichier par langue, chargé
+seulement si le visiteur n'est pas en français. Les libellés qui portent un nom
+de produit ou un nombre passent par `_patterns`, une liste d'expressions
+régulières. Une chaîne absente reste en français : il n'y a pas de page à
+moitié traduite, seulement des morceaux non encore couverts.
+
+Les textes éditoriaux et les fiches produit vivent dans `data/store.json` et ne
+sont pas traduits. Pour les traduire, il suffit d'ajouter leurs chaînes dans
+`data/i18n.json`.
+
+## Mesure d'audience et cookies
+
+Aucun script de mesure n'est chargé par la page. Il n'arrive qu'après un accord
+donné dans la bannière, et l'accord est redemandé au bout de six mois. Le lien
+« Gestion des cookies » du pied de page rouvre la bannière à tout moment, et
+`/policies/cookie-policy` détaille ce qui est conservé.
+
+Le fournisseur se règle dans `data/site.json`, sous `analytics` :
+
+| `provider` | Ce qu'il faut dans `id` |
+| --- | --- |
+| `none` | rien ; aucune bannière n'apparaît, il n'y a rien à consentir |
+| `vercel` | rien ; le script vient de l'hébergeur une fois Web Analytics activé sur le projet |
+| `plausible` | le domaine déclaré chez Plausible |
+| `ga4` | l'identifiant de mesure `G-…` |
+
+## Formulaires
+
+La newsletter et la page Contact postent leur contenu en JSON à l'adresse
+indiquée dans `data/site.json`, sous `forms.endpoint`. Tant que ce champ est
+vide, **rien n'est envoyé** : le formulaire le dit et renvoie vers l'adresse
+e-mail de la boutique plutôt que d'afficher une confirmation qui n'en serait
+pas une.
+
+## Icônes
+
+`node scripts/make-icons.js` dessine le jeu complet dans `src/assets/icons` :
+favicon vectoriel, `favicon.ico` à deux tailles, icône iOS et icônes 192 et 512
+pour le manifeste. Tout est calculé, sans dépendance ni fichier source à
+maintenir : la figure et les couleurs sont dans le script.
+
 ## Écarts assumés par rapport au site d'origine
 
 Le site Shopify sert de référence pour la structure, les textes et les visuels.
@@ -272,6 +366,10 @@ Quatre écarts sont volontaires :
 
 Le paiement, les comptes clients et le géolocalisateur de boutiques sont des
 maquettes fonctionnelles : il n'y a pas de back-office derrière.
+
+Les textes légaux repris de Shopify décrivent encore Shopify comme hébergeur et
+sous-traitant. Ils ne correspondent plus à l'installation et demandent une
+relecture juridique.
 
 ## Mettre à jour les données
 

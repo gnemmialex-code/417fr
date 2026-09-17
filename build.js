@@ -77,13 +77,33 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/* Une description de résultat de recherche se lit jusqu'à 160 caractères
+   environ. Au-delà le moteur coupe lui-même, et souvent au milieu d'un mot. */
+function metaDescription(value) {
+  const text = stripTags(value).replace(/\s+/g, ' ').trim();
+  if (text.length <= 160) return text;
+  const cut = text.slice(0, 157);
+  const space = cut.lastIndexOf(' ');
+  return (space > 100 ? cut.slice(0, space) : cut).replace(/[,;:.\u2026]+$/, '') + '\u2026';
+}
+
 function stripTags(value) {
   return String(value == null ? '' : value).replace(/<[^>]+>/g, ' ')
     .replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/* Les prix partent en euros, la devise de facturation, mais portent le
+   montant brut : le navigateur les reaffiche dans la devise du visiteur sans
+   avoir a deviner quoi que ce soit dans le texte. */
+/* Open Graph et les moteurs veulent des adresses absolues. */
+function absolute(url) {
+  const value = String(url || '');
+  return value.charAt(0) === '/' ? SITE_URL + value : value;
+}
+
 function money(amount) {
-  return `€${Number(amount || 0).toFixed(2).replace('.', ',')}`;
+  const value = Number(amount || 0);
+  return `<span class="money" data-amount="${value.toFixed(2)}">€${value.toFixed(2).replace('.', ',')}</span>`;
 }
 
 function write(relPath, contents) {
@@ -119,6 +139,37 @@ function reveal(index = 0, variant = '') {
 /* Catalogue                                                                   */
 /* -------------------------------------------------------------------------- */
 
+/* Trois etats visibles en boutique. Sans stock, un produit est annonce
+   « En arrivage » : c'est le cas courant, la boutique se reapprovisionne.
+   Seul le statut « Arrete » le bascule sur « Epuise », puisque celui-la ne
+   reviendra pas. */
+const DISCONTINUED_STATUS = 'Arrêté';
+
+function availabilityOf(product) {
+  if (Number(product.stock) > 0) return 'in-stock';
+  return product.status === DISCONTINUED_STATUS ? 'out-of-stock' : 'incoming';
+}
+
+const AVAILABILITY_LABELS = {
+  'in-stock': 'En stock',
+  'incoming': 'En arrivage',
+  'out-of-stock': 'Épuisé'
+};
+
+/* Ce que schema.org appelle les trois memes etats. */
+const SCHEMA_AVAILABILITY = {
+  'in-stock': 'https://schema.org/InStock',
+  'incoming': 'https://schema.org/BackOrder',
+  'out-of-stock': 'https://schema.org/OutOfStock'
+};
+
+/* Phrase affichee sous le prix, sur la fiche produit. */
+const STOCK_NOTES = {
+  'in-stock': 'En stock, expédié sous 24 h',
+  'incoming': 'En arrivage, réapprovisionnement en cours',
+  'out-of-stock': 'Épuisé, bientôt de retour'
+};
+
 const products = store.products
   .filter((p) => p.visible !== false)
   .map((p, index) => {
@@ -132,6 +183,7 @@ const products = store.products
       price: Number(p.price) || 0,
       compareAt: p.compareAt && Number(p.compareAt) > Number(p.price) ? Number(p.compareAt) : null,
       available: Number(p.stock) > 0,
+      availability: availabilityOf(p),
       stock: Number(p.stock) || 0,
       images,
       image: images[0] ? images[0].src : '',
@@ -183,6 +235,47 @@ function pickFilled(handles, count, exclude) {
   }
   return chosen.slice(0, count);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Langues et devises                                                          */
+/* -------------------------------------------------------------------------- */
+
+/* Le navigateur choisit seul la langue et la devise a la premiere visite ;
+   ces reglages lui donnent la matiere. Les taux servent a l'affichage, la
+   facturation reste dans la devise de base. */
+const BASE_CURRENCY = site.baseCurrency || 'EUR';
+const DEFAULT_LOCALE = site.defaultLocale || 'fr';
+const LOCALES = site.locales || [{ code: DEFAULT_LOCALE, label: 'Français' }];
+const CURRENCIES = site.currencies || { EUR: { symbol: '€', rate: 1, locale: 'fr-FR' } };
+
+/* Un fichier par langue, servi separement : la page francaise ne paie pas
+   le poids des traductions, et le navigateur ne telecharge la sienne qu'une
+   fois. */
+const translations = (() => {
+  const file = path.join(DATA, 'i18n.json');
+  if (!fs.existsSync(file)) return {};
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const out = {};
+  Object.keys(raw).forEach((code) => {
+    if (code.charAt(0) !== '_' && code !== DEFAULT_LOCALE) out[code] = raw[code];
+  });
+  return out;
+})();
+
+const I18N_VERSION = crypto.createHash('sha1')
+  .update(JSON.stringify(translations)).digest('hex').slice(0, 10);
+
+const localeConfig = {
+  defaultLocale: DEFAULT_LOCALE,
+  defaultCountry: site.defaultCountry || 'France',
+  baseCurrency: BASE_CURRENCY,
+  locales: LOCALES,
+  currencies: CURRENCIES,
+  countries: site.countries,
+  ratesUpdatedAt: site.ratesUpdatedAt || '',
+  translated: Object.keys(translations),
+  version: I18N_VERSION
+};
 
 /* -------------------------------------------------------------------------- */
 /* Codes de réduction                                                          */
@@ -252,14 +345,13 @@ const icons = {
 /* Composants                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Vignette en haut à gauche de la carte, paramétrée depuis le back-office. */
+/** Vignette en haut à gauche de la carte, paramétrée depuis le back-office.
+    Elle s'affiche pour un seul des trois états : en stock, épuisé ou en
+    arrivage. */
 function productBadge(product) {
   const config = product.badge;
-  const matches = config && config.enabled && config.text && (
-    config.when === 'always'
-    || (config.when === 'in-stock' && product.available)
-    || (config.when === 'out-of-stock' && !product.available)
-  );
+  const matches = config && config.enabled && config.text
+    && config.when === product.availability;
   if (matches) {
     const tone = config.tone === 'clair' ? '' : ` card__badge--${config.tone === 'accent' ? 'accent' : 'dark'}`;
     return `<span class="card__badge${tone}">${escapeHtml(config.text)}</span>`;
@@ -280,7 +372,7 @@ function productCard(product, index = 0) {
 
   const multi = product.hoverImage && product.hoverImage !== product.image ? ' data-multi' : '';
 
-  return `<article class="card" data-card data-position="${index}" data-price="${product.price}" data-title="${escapeHtml(product.title)}" data-available="${product.available}"${reveal(index)}>
+  return `<article class="card" data-card data-position="${index}" data-price="${product.price}" data-title="${escapeHtml(product.title)}" data-available="${product.available}" data-availability="${product.availability}"${reveal(index)}>
   <div class="card__top"${multi}>
     <a class="card__media" href="/products/${product.handle}" aria-label="${escapeHtml(product.title)}">
       ${badge}
@@ -357,8 +449,12 @@ function drawers() {
     .join('\n      ');
 
   const regions = site.countries
-    .map((c, i) => `<li data-stagger style="--i:${i}"><button type="button" data-region="${escapeHtml(c.name)}" data-currency="${c.currency}"><span>${escapeHtml(c.name)}</span><span>${c.currency}${c.symbol === c.currency ? '' : ` ${c.symbol}`}</span></button></li>`)
+    .map((c, i) => `<li data-stagger style="--i:${i}"><button type="button" data-region="${escapeHtml(c.name)}" data-country="${escapeHtml(c.code || '')}" data-currency="${c.currency}" data-lang="${escapeHtml(c.lang || DEFAULT_LOCALE)}"><span>${escapeHtml(c.name)}</span><span>${c.currency}${c.symbol === c.currency ? '' : ` ${c.symbol}`}</span></button></li>`)
     .join('\n      ');
+
+  const languages = LOCALES
+    .map((l) => `<li><button type="button" data-lang-choice="${escapeHtml(l.code)}" lang="${escapeHtml(l.code)}">${escapeHtml(l.label)}</button></li>`)
+    .join('');
 
   return `<div class="overlay" data-overlay></div>
 
@@ -424,9 +520,16 @@ function drawers() {
     <button type="button" class="ibtn" data-close-drawer aria-label="Fermer">${icons.close}</button>
   </div>
   <div class="drawer__body">
+    <p class="region-auto" data-region-auto hidden></p>
+    <h3 class="region-label">Langue</h3>
+    <ul class="lang-list">
+      ${languages}
+    </ul>
+    <h3 class="region-label">Pays et devise</h3>
     <ul class="region-list">
       ${regions}
     </ul>
+    <p class="region-note">Les prix sont convertis à titre indicatif. La commande est facturée en ${escapeHtml(BASE_CURRENCY)}.</p>
   </div>
 </aside>
 
@@ -438,7 +541,27 @@ function drawers() {
   <p class="lightbox__counter" data-lightbox-counter></p>
 </div>
 
-<button type="button" class="to-top" data-to-top aria-label="Revenir en haut">${icons.up}</button>`;
+<button type="button" class="to-top" data-to-top aria-label="Revenir en haut">${icons.up}</button>
+
+${consentBanner()}`;
+}
+
+/** Bandeau de consentement. Il reste caché tant que le script n'a pas vérifié
+    qu'aucune réponse n'est déjà enregistrée : sans script, rien ne s'affiche
+    et rien n'est mesuré non plus. */
+function consentBanner() {
+  return `<div class="consent" data-consent hidden role="region" aria-labelledby="consent-title">
+  <div class="consent__inner">
+    <div class="consent__copy">
+      <p class="consent__title" id="consent-title">Cookies et mesure d’audience</p>
+      <p class="consent__text">Le panier et votre choix de région sont gardés dans votre navigateur : c’est nécessaire au fonctionnement de la boutique. La mesure d’audience, elle, n’est activée qu’avec votre accord. <a href="/policies/cookie-policy">En savoir plus</a></p>
+    </div>
+    <div class="consent__actions">
+      <button type="button" class="btn btn--outline btn--sm" data-consent-answer="denied">Refuser</button>
+      <button type="button" class="btn btn--sm" data-consent-answer="granted">Accepter</button>
+    </div>
+  </div>
+</div>`;
 }
 
 function newsletter() {
@@ -447,7 +570,7 @@ function newsletter() {
     <p class="eyebrow" style="color:var(--clay)">Newsletter</p>
     <h2 class="title title--md">${escapeHtml(site.newsletter.title)}</h2>
     <p class="lede">${escapeHtml(site.newsletter.text)}</p>
-    <form class="news__form" data-demo-form data-success="Merci, votre inscription est enregistrée.">
+    <form class="news__form" data-site-form="newsletter" data-success="Merci, votre inscription est enregistrée.">
       <label class="visually-hidden" for="newsletter-email">E-mail</label>
       <input id="newsletter-email" type="email" name="email" placeholder="Votre adresse e-mail" required>
       <button type="submit" class="btn">S’inscrire</button>
@@ -461,7 +584,7 @@ function newsletter() {
     replie pour raccourcir le pied de page, et sans script rien n'est cache. */
 function footerGroup(title, items) {
   return `<details class="fgroup" open>
-        <summary><h4>${escapeHtml(title)}</h4><span class="fgroup__sign" aria-hidden="true"></span></summary>
+        <summary><h3>${escapeHtml(title)}</h3><span class="fgroup__sign" aria-hidden="true"></span></summary>
         <ul>${items}</ul>
       </details>`;
 }
@@ -474,7 +597,8 @@ function footer() {
     ['/pages/contact', 'Nous écrire'],
     ['/search', 'Rechercher']
   ].map(([url, label]) => `<li><a href="${url}">${label}</a></li>`).join('');
-  const policies = site.policies.map((p) => `<li><a href="/policies/${p.handle}">${escapeHtml(p.title)}</a></li>`).join('');
+  const policies = site.policies.map((p) => `<li><a href="/policies/${p.handle}">${escapeHtml(p.title)}</a></li>`).join('')
+    + '<li><button type="button" class="footer__link" data-consent-reopen>Gestion des cookies</button></li>';
 
   return `<footer class="footer">
   <div class="container footer__top">
@@ -499,12 +623,12 @@ function layout(options) {
   const {
     title, description = site.description, body,
     currentPath = '/', hasHero = false, image = site.socialImage,
-    canonical = currentPath, extraHead = ''
+    canonical = currentPath, extraHead = '', ogType = 'website', preloadImage = ''
   } = options;
 
   const catalogJson = JSON.stringify(products.map((p) => ({
     handle: p.handle, title: p.title, price: p.price, category: p.category,
-    available: p.available, image: p.image, excerpt: p.excerpt
+    available: p.available, availability: p.availability, image: p.image, excerpt: p.excerpt
   })));
 
   return `<!DOCTYPE html>
@@ -513,18 +637,27 @@ function layout(options) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
-<meta name="description" content="${escapeHtml(description)}">
+<meta name="description" content="${escapeHtml(metaDescription(description))}">
 <link rel="canonical" href="${SITE_URL}${canonical}">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <meta property="og:site_name" content="${escapeHtml(site.name)}">
-<meta property="og:type" content="website">
+<meta property="og:type" content="${ogType}">
+<meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="${escapeHtml(title)}">
-<meta property="og:description" content="${escapeHtml(description)}">
-<meta property="og:image" content="${image}">
+<meta property="og:description" content="${escapeHtml(metaDescription(description))}">
+<meta property="og:image" content="${absolute(image)}">
+<meta property="og:image:alt" content="${escapeHtml(title)}">
 <meta property="og:url" content="${SITE_URL}${canonical}">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escapeHtml(title)}">
+<meta name="twitter:description" content="${escapeHtml(metaDescription(description))}">
+<meta name="twitter:image" content="${absolute(image)}">
 <meta name="theme-color" content="#17130f">
-<link rel="icon" href="${site.logoDark}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+${preloadImage ? `<link rel="preload" as="image" href="${preloadImage}" fetchpriority="high">\n` : ''}<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${site.fonts}">
 <link rel="stylesheet" href="/assets/css/styles.css?v=${CSS_VERSION}">
@@ -542,20 +675,44 @@ ${drawers()}
 <script>window.SITE_PRODUCTS = ${catalogJson};window.SITE_CONFIG = ${JSON.stringify({
   freeShippingThreshold: settings.freeShippingThreshold || site.freeShippingThreshold,
   shippingCost: settings.shippingCost === undefined ? 5.9 : Number(settings.shippingCost)
-})};window.SITE_DISCOUNTS = ${JSON.stringify(liveDiscounts)};</script>
+})};window.SITE_FORMS = ${JSON.stringify({
+  endpoint: (site.forms && site.forms.endpoint) || '',
+  email: settings.email || ''
+})};window.SITE_ANALYTICS = ${JSON.stringify(site.analytics || { provider: 'none', id: '' })};window.SITE_LOCALE = ${JSON.stringify(localeConfig)};window.SITE_DISCOUNTS = ${JSON.stringify(liveDiscounts)};</script>
 <script src="/assets/js/app.js?v=${JS_VERSION}" defer></script>
 </body>
 </html>
 `;
 }
 
+/* Les moteurs lisent le JSON-LD ; le « < » échappé évite qu'une valeur ne
+   referme la balise script. */
+function jsonLd(data) {
+  const payload = JSON.stringify(data).replace(/</g, '\\u003c');
+  return `<script type="application/ld+json">${payload}</script>`;
+}
+
+/* Le fil d'Ariane sert aussi aux moteurs : la même liste, en JSON-LD, est ce
+   qui donne le chemin affiché sous le titre dans les résultats. */
 function breadcrumb(items) {
   const parts = items.map((item, i) => (
     i === items.length - 1
       ? `<span aria-current="page">${escapeHtml(item.label)}</span>`
       : `<a href="${item.url}">${escapeHtml(item.label)}</a><span>/</span>`
   ));
-  return `<nav class="container crumb" aria-label="Fil d’Ariane">${parts.join('')}</nav>`;
+
+  const trail = jsonLd({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => {
+      const entry = { '@type': 'ListItem', position: i + 1, name: item.label };
+      if (item.url) entry.item = SITE_URL + item.url;
+      return entry;
+    })
+  });
+
+  return `<nav class="container crumb" aria-label="Fil d’Ariane">${parts.join('')}</nav>
+${trail}`;
 }
 
 function reassurance() {
@@ -928,10 +1085,44 @@ ${moreProducts.length ? `<section class="section section--sm section--more secti
   </div>
 </section>`;
 
+  /* Identité de la boutique et recherche interne : ce sont les deux choses
+     qu'un moteur attend de la page d'accueil. */
+  const identity = jsonLd([
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: site.name,
+      url: SITE_URL,
+      logo: absolute(site.logoDark),
+      description: site.description,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: settings.address || site.store.address,
+        postalCode: settings.zip || '',
+        addressLocality: settings.city || '',
+        addressCountry: 'FR'
+      }
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: site.name,
+      url: SITE_URL,
+      inLanguage: DEFAULT_LOCALE,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
+        'query-input': 'required name=search_term_string'
+      }
+    }
+  ]);
+
   return layout({
     title: `417 France | ${site.tagline}`,
     description: site.description,
-    body, currentPath: '/', hasHero: true, canonical: '/'
+    body: body + '\n' + identity,
+    currentPath: '/', hasHero: true, canonical: '/',
+    preloadImage: heroSlides[0] || ''
   });
 }
 
@@ -948,9 +1139,9 @@ function collectionPage(collection) {
   <div class="toolbar">
     <p class="toolbar__count"><span data-collection-count>${count} ${count > 1 ? 'soins' : 'soin'}</span></p>
     <div class="filters">
-      <button type="button" class="chip is-active" data-availability="all" aria-pressed="true">Tous</button>
-      <button type="button" class="chip" data-availability="in" aria-pressed="false">Disponibles</button>
-      <button type="button" class="chip" data-availability="out" aria-pressed="false">Épuisés</button>
+      <button type="button" class="chip is-active" data-filter-availability="all" aria-pressed="true">Tous</button>
+      <button type="button" class="chip" data-filter-availability="in-stock" aria-pressed="false">Disponibles</button>
+      <button type="button" class="chip" data-filter-availability="incoming" aria-pressed="false">En arrivage</button>
       <label class="visually-hidden" for="sort">Trier</label>
       <select id="sort" data-sort>
         <option value="manual">Tri : sélection</option>
@@ -961,6 +1152,7 @@ function collectionPage(collection) {
       </select>
     </div>
   </div>
+  <h2 class="visually-hidden">Les soins de cette sélection</h2>
   <div class="grid" data-collection-grid>
       ${cards}
   </div>
@@ -1011,9 +1203,9 @@ function productPage(product) {
         <button type="button" data-step="up" aria-label="Augmenter la quantité">+</button>
       </div>
       <button type="button" class="btn" data-add-to-cart="${product.handle}" data-qty-source="#qty-${product.handle}">Ajouter au panier</button>`
-    : '<button type="button" class="btn btn--block" disabled>Épuisé</button>';
+    : `<button type="button" class="btn btn--block" disabled>${AVAILABILITY_LABELS[product.availability]}</button>`;
 
-  const jsonLd = JSON.stringify({
+  const productSchema = {
     '@context': 'https://schema.org', '@type': 'Product',
     name: product.title,
     image: product.images.map((i) => SITE_URL + i.src),
@@ -1021,10 +1213,10 @@ function productPage(product) {
     brand: { '@type': 'Brand', name: site.name },
     offers: {
       '@type': 'Offer', price: product.price.toFixed(2), priceCurrency: 'EUR',
-      availability: product.available ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      availability: SCHEMA_AVAILABILITY[product.availability],
       url: `${SITE_URL}/products/${product.handle}`
     }
-  });
+  };
 
   const body = `${breadcrumb([
     { label: 'Accueil', url: '/' },
@@ -1047,7 +1239,7 @@ function productPage(product) {
       <p class="panel__vendor">${escapeHtml(product.category)} &middot; ${escapeHtml(site.name)}</p>
       <h1>${escapeHtml(product.title)}</h1>
       <p class="panel__price">${price}</p>
-      <p class="panel__stock${product.available ? '' : ' is-out'}">${product.available ? 'En stock, expédié sous 24 h' : 'Épuisé, bientôt de retour'}</p>
+      <p class="panel__stock${product.available ? '' : ' is-out'}">${STOCK_NOTES[product.availability]}</p>
       <div class="buy" data-buy-anchor>
         ${buy}
       </div>
@@ -1085,15 +1277,16 @@ function productPage(product) {
   </div>
   ${product.available
     ? `<button type="button" class="btn btn--sm" data-add-to-cart="${product.handle}">Ajouter</button>`
-    : '<button type="button" class="btn btn--sm" disabled>Épuisé</button>'}
+    : `<button type="button" class="btn btn--sm" disabled>${AVAILABILITY_LABELS[product.availability]}</button>`}
 </div>
-<script type="application/ld+json">${jsonLd}</script>`;
+${jsonLd(productSchema)}`;
 
   return layout({
     title: `${product.title} – ${site.name}`,
     description: product.excerpt || site.description,
     body,
     currentPath: `/products/${product.handle}`,
+    ogType: 'product',
     canonical: `/products/${product.handle}`,
     image: product.image
   });
@@ -1180,6 +1373,7 @@ function faqPage() {
   <div class="acc faq"${reveal(0, 'fade')}>
     ${items}
   </div>
+  <h2 class="visually-hidden">Nos garanties</h2>
   <div class="contact-cards" style="grid-template-columns:repeat(4,1fr)">
       ${reassure}
   </div>
@@ -1188,10 +1382,21 @@ function faqPage() {
   </p>
 </section>`;
 
+  const schema = jsonLd({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: site.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a }
+    }))
+  });
+
   return layout({
     title: `Livraison et retours – ${site.name}`,
     description: 'Délais, frais de port, retours et paiement : toutes les réponses.',
-    body, currentPath: '/pages/livraison-et-retours', canonical: '/pages/livraison-et-retours'
+    body: body + '\n' + schema,
+    currentPath: '/pages/livraison-et-retours', canonical: '/pages/livraison-et-retours'
   });
 }
 
@@ -1202,7 +1407,7 @@ function contactPage() {
   <p${reveal(1, 'fade')}>Une question sur un soin, une commande ou un partenariat ? Nous répondons sous 24 heures ouvrées.</p>
 </section>
 <section class="container" style="padding-bottom:var(--space)">
-  <form class="form" data-demo-form data-success="Merci, votre message a bien été transmis."${reveal(0)}>
+  <form class="form" data-site-form="contact" data-success="Merci, votre message a bien été transmis."${reveal(0)}>
     <div class="field"><label for="contact-name">Nom</label><input id="contact-name" name="name" type="text" autocomplete="name"></div>
     <div class="field"><label for="contact-email">E-mail <span class="req" aria-hidden="true">*</span></label><input id="contact-email" name="email" type="email" autocomplete="email" required></div>
     <div class="field"><label for="contact-phone">Téléphone</label><input id="contact-phone" name="phone" type="tel" autocomplete="tel"></div>
@@ -1210,6 +1415,7 @@ function contactPage() {
     <button type="submit" class="btn">Envoyer</button>
     <p class="form-note" data-form-note style="color:var(--muted)"></p>
   </form>
+  <h2 class="visually-hidden">Nous joindre</h2>
   <div class="contact-cards">
     <div${reveal(0)}><h3>Boutique</h3><p>${escapeHtml(site.store.name)}<br>${escapeHtml(site.store.address)}</p></div>
     <div${reveal(1)}><h3>Service client</h3><p>Réponse sous 24 h ouvrées</p></div>
@@ -1232,6 +1438,7 @@ function storeLocatorPage() {
   <p${reveal(1, 'fade')}>Retrouvez les soins 417 France près de chez vous.</p>
 </section>
 <section class="container" style="padding-bottom:var(--space)">
+  <h2 class="visually-hidden">Trouver un point de vente</h2>
   <div class="locator">
     <div class="locator__panel"${reveal(0)}>
       <div class="field"><label for="locator-search">Ville ou code postal</label><input id="locator-search" type="search" placeholder="Paris, 75017…"></div>
@@ -1317,7 +1524,14 @@ function notFoundPage() {
 /* -------------------------------------------------------------------------- */
 
 function buildSitemap(urls) {
-  const entries = urls.map((u) => `  <url><loc>${SITE_URL}${u}</loc></url>`).join('\n');
+  const today = new Date().toISOString().slice(0, 10);
+  const entries = urls.map((u) => {
+    /* L'accueil passe avant les collections, elles-mêmes avant les pages
+       éditoriales : c'est l'ordre dans lequel on veut être exploré. */
+    const priority = u === '/' ? '1.0'
+      : (u.startsWith('/collections/') || u.startsWith('/products/')) ? '0.8' : '0.5';
+    return `  <url><loc>${SITE_URL}${u}</loc><lastmod>${today}</lastmod><priority>${priority}</priority></url>`;
+  }).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
 }
 
@@ -1357,7 +1571,33 @@ function build() {
   write(path.join('search', 'index.html'), searchPage());
   urls.push('/search');
 
+  Object.keys(translations).forEach((code) => {
+    write(path.join('assets', 'i18n', code + '.json'), JSON.stringify(translations[code]));
+  });
+
   write('404.html', notFoundPage());
+  /* Les navigateurs anciens demandent /favicon.ico sans qu'on le déclare,
+     et les mobiles lisent le manifeste pour l'icône de l'écran d'accueil. */
+  const icons = path.join(SRC, 'assets', 'icons');
+  if (fs.existsSync(path.join(icons, 'favicon.ico'))) {
+    fs.copyFileSync(path.join(icons, 'favicon.ico'), path.join(DIST, 'favicon.ico'));
+  }
+  write('site.webmanifest', JSON.stringify({
+    name: site.name,
+    short_name: site.name,
+    description: site.description,
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#f7f3ee',
+    theme_color: '#17130f',
+    lang: DEFAULT_LOCALE,
+    icons: [
+      { src: '/assets/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/assets/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { src: '/assets/icons/favicon.svg', sizes: 'any', type: 'image/svg+xml' }
+    ]
+  }, null, 2));
+
   write('sitemap.xml', buildSitemap(urls));
   write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /preview\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 
