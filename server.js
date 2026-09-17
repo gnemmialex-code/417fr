@@ -170,6 +170,9 @@ async function handleApi(req, res, pathname) {
       return sendJson(res, 429, { error: 'Trop d’envois. Réessayez dans quelques minutes.' });
     }
     const body = await readBody(req);
+    /* Champ piège rempli : c'est un robot. On répond comme si de rien n'était
+       plutôt que de lui apprendre ce qui l'a trahi. */
+    if (String(body.website || '').trim()) return sendJson(res, 200, { ok: true });
     /* « sujet » est le nom posé par le formulaire de la boutique. */
     const result = admin.receiveMessage({
       kind: body.kind || body.sujet,

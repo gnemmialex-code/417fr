@@ -222,6 +222,8 @@ mot de passe et suppression des données de démonstration.
 ## Organisation
 
 ```
+api/             Fonctions servies par Vercel
+  contact.js       Formulaires de la boutique en ligne, relayés par e-mail
 lib/             Socle du back-office
   store.js         Base JSON, écritures atomiques
   auth.js          Hachage scrypt, sessions signées, anti-force brute
@@ -345,24 +347,56 @@ indiquée dans `data/site.json`, sous `forms.endpoint`. Par défaut c'est
 `/api/contact`, la route du serveur local : l'envoi atterrit dans la rubrique
 **Messages** du back-office.
 
+**La même adresse répond aux deux endroits, différemment.** En local,
+`server.js` traite la route et range le message dans la rubrique Messages. En
+ligne, c'est `api/contact.js`, une fonction Vercel, qui la traite et relaie le
+message par e-mail : le système de fichiers y est en lecture seule, il n'y a
+donc rien à ranger.
+
 C'est la seule route ouverte sans session — c'est le visiteur qui écrit, il n'a
-pas de compte. Elle est tenue de près : en-tête `X-Requested-With` exigé, ce qui
-écarte les envois venus d'un formulaire hébergé ailleurs ; adresse e-mail
-vérifiée ; champs coupés à une longueur raisonnable ; cinq envois par adresse IP
-toutes les dix minutes ; et le même formulaire renvoyé deux fois en moins d'une
-minute ne crée qu'une entrée. Le texte reçu est rangé tel quel et affiché comme
-du texte, jamais interprété.
+pas de compte. Les deux chemins appliquent les mêmes règles : en-tête
+`X-Requested-With` exigé, ce qui écarte les envois venus d'un formulaire
+hébergé ailleurs ; champ piège invisible qui fait taire les robots ; adresse
+e-mail vérifiée ; champs coupés à une longueur raisonnable ; cinq envois par
+adresse IP toutes les dix minutes. En local s'ajoute une protection contre le
+double envoi. Le texte reçu est rangé tel quel et affiché comme du texte,
+jamais interprété.
 
 Si `forms.endpoint` est vide, **rien n'est envoyé** : le formulaire le dit et
 renvoie vers l'adresse e-mail de la boutique plutôt que d'afficher une
-confirmation qui n'en serait pas une.
+confirmation qui n'en serait pas une. Il en va de même si la clé Resend
+manque : la fonction répond une erreur franche, jamais un faux succès.
 
-**En ligne, cette route n'existe pas.** Vercel sert la boutique statique, pas le
-serveur Node, et son système de fichiers est en lecture seule : un envoi depuis
-le site déployé échoue et le formulaire affiche l'adresse e-mail de repli. La
-boîte Messages ne se remplit donc que sur `node server.js`. Pour recevoir les
-messages en ligne, il faut une fonction serveur et un stockage qui lui survive,
-ou un service de formulaires dont l'adresse est mise dans `forms.endpoint`.
+### Mettre l'envoi en ligne en service
+
+Resend n'accepte d'envoyer que depuis un domaine que vous possédez et dont vous
+pouvez modifier les DNS.
+
+```bash
+vercel integration add resend/resend-email --plan free \
+  -m domain=417france.com -m region=eu-west-1
+```
+
+Resend donne ensuite des enregistrements SPF et DKIM à poser sur le domaine.
+Tant qu'ils ne sont pas vérifiés, l'envoi est refusé.
+
+| Variable | Rôle |
+| --- | --- |
+| `RESEND_API_KEY` | Posée par la commande ci-dessus. Sans elle, la fonction répond 503 et la boutique affiche son adresse de repli. |
+| `CONTACT_TO` | Destinataire. À défaut, `contact@417france.com`. |
+| `CONTACT_FROM` | Expéditeur. **Doit être sur le domaine vérifié.** À défaut, `Formulaire 417 France <contact@417france.com>`. |
+
+```bash
+vercel env add CONTACT_TO production
+vercel env add CONTACT_FROM production
+```
+
+Le courriel part en texte simple, avec le nom, l'adresse, le téléphone et le
+message. Son champ `reply_to` porte l'adresse du visiteur : répondre depuis la
+messagerie lui écrit directement.
+
+**La rubrique Messages du back-office ne se remplit qu'en local.** En ligne les
+messages arrivent dans la boîte mail, pas dans `data/store.json`.
 
 ## Icônes
 

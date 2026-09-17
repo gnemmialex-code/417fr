@@ -564,6 +564,19 @@ function consentBanner() {
 </div>`;
 }
 
+/** Champ piège anti-robot. Il n'est ni vu, ni atteignable au clavier, ni
+    proposé en saisie automatique : rempli, l'envoi est ignoré. */
+let honeypotCount = 0;
+
+function honeypot() {
+  honeypotCount += 1;
+  const id = `website-${honeypotCount}`;
+  return `<p class="visually-hidden" aria-hidden="true">
+      <label for="${id}">Ne remplissez pas ce champ</label>
+      <input id="${id}" type="text" name="website" tabindex="-1" autocomplete="off">
+    </p>`;
+}
+
 function newsletter() {
   return `<section class="section section--sm news">
   <div class="container"${reveal(0, 'fade')}>
@@ -573,6 +586,7 @@ function newsletter() {
     <form class="news__form" data-site-form="newsletter" data-success="Merci, votre inscription est enregistrée.">
       <label class="visually-hidden" for="newsletter-email">E-mail</label>
       <input id="newsletter-email" type="email" name="email" placeholder="Votre adresse e-mail" required>
+      ${honeypot()}
       <button type="submit" class="btn">S’inscrire</button>
       <p class="form-note" data-form-note style="flex:1 0 100%"></p>
     </form>
@@ -1412,6 +1426,7 @@ function contactPage() {
     <div class="field"><label for="contact-email">E-mail <span class="req" aria-hidden="true">*</span></label><input id="contact-email" name="email" type="email" autocomplete="email" required></div>
     <div class="field"><label for="contact-phone">Téléphone</label><input id="contact-phone" name="phone" type="tel" autocomplete="tel"></div>
     <div class="field"><label for="contact-message">Votre message</label><textarea id="contact-message" name="message"></textarea></div>
+    ${honeypot()}
     <button type="submit" class="btn">Envoyer</button>
     <p class="form-note" data-form-note style="color:var(--muted)"></p>
   </form>
