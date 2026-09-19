@@ -11,6 +11,7 @@ require('./lib/env');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const supabase = require('./lib/supabase');
 
 const ROOT = __dirname;
 const DATA = path.join(ROOT, 'data');
@@ -1449,11 +1450,16 @@ function contactPage() {
   });
 }
 
-/** Espace client, porté par le serveur de la boutique : e-mail et mot de
-    passe, rien d'autre. Pas de confirmation d'adresse ni de fournisseur
-    externe. La page est la même pour tous : le script demande au serveur qui
-    est connecté et montre le bon panneau. */
+/** Espace client, porté par Supabase Auth : e-mail et mot de passe, rien
+    d'autre. La page parle directement à Supabase, ce qui fonctionne aussi
+    bien en local que sur le site publié, où il n'y a pas de serveur Node.
+    L'adresse du projet et sa clé publique sont figées ici au moment du build :
+    sans elles, la page annonce l'espace client fermé. */
 function accountPage() {
+  const auth = supabase.publicConfig();
+  if (!auth) {
+    console.warn('  ! SUPABASE_URL ou SUPABASE_PUBLISHABLE_KEY absent : l’espace client sera fermé sur ce build.');
+  }
   const body = `${breadcrumb([{ label: 'Accueil', url: '/' }, { label: 'Espace client' }])}
 <section class="container page-head">
   <h1>Espace client</h1>
@@ -1501,11 +1507,18 @@ function accountPage() {
   <p class="account__status" data-account-offline hidden></p>
 </section>`;
 
+  /* L'adresse de la boutique est toujours transmise : elle ouvre le
+     back-office même sans Supabase. Le client Supabase n'est chargé que s'il
+     est configuré, et la clé transmise est la clé publique, faite pour être
+     lue par le navigateur. */
+  const extraHead = `<script>window.SITE_AUTH = ${JSON.stringify({ supabase: auth, adminEmails: supabase.ADMIN_EMAILS })};</script>
+${auth ? '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>\n' : ''}`;
+
   return layout({
     title: `Espace client – ${site.name}`,
     description: 'Connectez-vous à votre espace client 417 France ou créez votre compte.',
     body, currentPath: '/pages/compte', canonical: '/pages/compte',
-    robots: 'noindex, follow'
+    robots: 'noindex, follow', extraHead
   });
 }
 

@@ -17,15 +17,12 @@ const store = require('./lib/store');
 const adminAccount = require('./lib/admin-account');
 const auth = require('./lib/auth');
 const admin = require('./lib/admin-api');
-const customers = require('./lib/customers');
 
 const DIST = path.join(__dirname, 'dist');
 const ADMIN_DIR = path.join(__dirname, 'src', 'admin');
 const PREVIEW_DIR = path.join(__dirname, 'src', 'preview');
 const PORT = Number(process.argv[2] || process.env.PORT || 4170);
 const COOKIE = 'f417_session';
-/* Cookie de l'espace client, distinct de celui du back-office. */
-const CLIENT_COOKIE = 'f417_client';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -134,15 +131,6 @@ function session(req) {
   return payload && payload.role ? payload : null;
 }
 
-function clientSession(req) {
-  return customers.fromToken(auth.readCookie(req.headers.cookie, CLIENT_COOKIE));
-}
-
-function setClientCookie(res, token) {
-  res.setHeader('Set-Cookie', CLIENT_COOKIE + '=' + encodeURIComponent(token)
-    + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + customers.SESSION_DAYS * 24 * 3600);
-}
-
 function resolveStatic(root, pathname) {
   const decoded = decodeURIComponent(pathname);
   const safe = path.normalize(decoded).replace(/^(\.\.[/\\])+/, '');
@@ -205,61 +193,25 @@ async function handleApi(req, res, pathname) {
     return sendJson(res, 200, { ok: true });
   }
 
-  /* ----- Espace client -----
-     Ces routes précèdent le contrôle de session du back-office : un visiteur
-     doit pouvoir s'inscrire et se connecter sans compte d'administration. */
-
-  if (pathname === '/api/compte' && req.method === 'GET') {
-    return sendJson(res, 200, { customer: clientSession(req) });
-  }
-
-  if (pathname === '/api/compte/inscription' && req.method === 'POST') {
+  /* ----- Pont espace client → back-office -----
+     Les comptes clients vivent chez Supabase : la page leur parle
+     directement, le serveur n'y est pour rien. Seule l'adresse de la boutique
+     passe par ici : saisie dans l'espace client avec le mot de passe du
+     back-office, elle ouvre /admin. Cette route n'existe qu'en local ; en
+     ligne, la page l'annonce. Elle précède le contrôle de session, puisque
+     c'est elle qui l'ouvre. */
+  if (pathname === '/api/compte/admin' && req.method === 'POST') {
     const body = await readBody(req);
-
-    /* L'adresse de la boutique sert au back-office : en faire un compte client
-       rendrait la connexion ambiguë. */
-    if (adminAccount.adminEmails().indexOf(customers.normalizeEmail(body.email)) !== -1) {
-      return sendJson(res, 400, {
-        error: 'Cette adresse est celle de la boutique. Utilisez l’onglet « Se connecter ».'
-      });
+    const email = String(body.email || '').trim().toLowerCase();
+    if (adminAccount.adminEmails().indexOf(email) === -1) {
+      return sendJson(res, 403, { error: 'Cette adresse n’ouvre pas le back-office.' });
     }
-
-    const result = customers.register({
-      name: body.name,
-      email: body.email,
-      password: body.password
-    });
-    if (result.error) return sendJson(res, 400, { error: result.error });
-    setClientCookie(res, result.token);
-    return sendJson(res, 200, { customer: result.customer });
-  }
-
-  if (pathname === '/api/compte/connexion' && req.method === 'POST') {
-    const body = await readBody(req);
-
-    /* L'adresse de la boutique ouvre le back-office depuis ce formulaire :
-       c'est le point d'entrée que connaissent les gérants, qui n'ont pas à
-       retenir une seconde adresse. Le mot de passe vérifié est celui du
-       back-office, pas un compte client. */
-    const email = customers.normalizeEmail(body.email);
-    if (adminAccount.adminEmails().indexOf(email) !== -1) {
-      const admis = auth.login(email, body.password);
-      if (admis.error) return sendJson(res, 401, { error: admis.error });
-      res.setHeader('Set-Cookie', COOKIE + '=' + encodeURIComponent(admis.token)
-        + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + auth.SESSION_HOURS * 3600);
-      store.update(function (data) { store.log(data, 'Connexion', admis.user.username); });
-      return sendJson(res, 200, { redirect: '/admin' });
-    }
-
-    const result = customers.login(body.email, body.password);
-    if (result.error) return sendJson(res, 401, { error: result.error });
-    setClientCookie(res, result.token);
-    return sendJson(res, 200, { customer: result.customer });
-  }
-
-  if (pathname === '/api/compte/deconnexion' && req.method === 'POST') {
-    res.setHeader('Set-Cookie', CLIENT_COOKIE + '=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
-    return sendJson(res, 200, { ok: true });
+    const admis = auth.login(email, body.password);
+    if (admis.error) return sendJson(res, 401, { error: admis.error });
+    res.setHeader('Set-Cookie', COOKIE + '=' + encodeURIComponent(admis.token)
+      + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + auth.SESSION_HOURS * 3600);
+    store.update(function (data) { store.log(data, 'Connexion', admis.user.username); });
+    return sendJson(res, 200, { redirect: '/admin' });
   }
 
   const user = session(req);

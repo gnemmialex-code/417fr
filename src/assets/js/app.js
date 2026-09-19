@@ -1703,26 +1703,66 @@
 
   /* ---------- Espace client ---------- */
 
-  /* Les comptes vivent sur le serveur de la boutique : un e-mail, un mot de
-     passe, et c'est tout. Pas de confirmation d'adresse, pas de fournisseur
-     externe. La page demande à /api/compte qui est connecté, puis montre le
-     panneau correspondant. */
+  /* Les comptes clients vivent chez Supabase : e-mail et mot de passe, sans
+     fournisseur externe. La page parle directement à Supabase, ce qui
+     fonctionne aussi sur le site publié, où il n'y a pas de serveur Node.
 
-  function accountRequest(url, payload) {
-    var options = {
-      credentials: 'same-origin',
-      headers: { 'X-Requested-With': 'fetch' }
-    };
-    if (payload) {
-      options.method = 'POST';
-      options.headers['Content-Type'] = 'application/json';
-      options.body = JSON.stringify(payload);
+     Seule exception : l'adresse de la boutique. Elle n'a pas de compte
+     client ; avec le mot de passe du back-office, elle ouvre /admin grâce au
+     serveur local. En ligne, ce serveur n'existe pas et la page le dit. */
+
+  var AUTH_ERRORS = {
+    invalid_credentials: 'E-mail ou mot de passe incorrect.',
+    email_not_confirmed: 'Adresse non confirmée : cliquez sur le lien reçu par e-mail.',
+    user_already_exists: 'Un compte existe déjà avec cette adresse. Connectez-vous.',
+    email_exists: 'Un compte existe déjà avec cette adresse. Connectez-vous.',
+    weak_password: 'Le mot de passe doit contenir au moins 8 caractères.',
+    over_request_rate_limit: 'Trop de tentatives. Réessayez dans quelques minutes.',
+    over_email_send_rate_limit: 'Trop d’inscriptions en peu de temps. Réessayez dans quelques minutes.',
+    email_address_invalid: 'Adresse e-mail invalide.',
+    signup_disabled: 'Les inscriptions sont fermées pour le moment.'
+  };
+
+  var BACKOFFICE_LOCAL = 'Le back-office s’ouvre depuis le poste de gestion, avec « npm run dev ». Il n’est pas accessible sur le site en ligne.';
+
+  /* Erreur rédigée par la page elle-même, affichée telle quelle. */
+  function localError(message) {
+    return { local: true, message: message };
+  }
+
+  function authMessage(error) {
+    if (!error) return tr('Connexion impossible pour le moment.');
+    if (error.local) return tr(error.message);
+    var known = AUTH_ERRORS[error.code];
+    if (!known) {
+      var text = String(error.message || '');
+      if (/invalid login credentials/i.test(text)) known = AUTH_ERRORS.invalid_credentials;
+      else if (/not confirmed/i.test(text)) known = AUTH_ERRORS.email_not_confirmed;
+      else if (/already registered|already exists/i.test(text)) known = AUTH_ERRORS.user_already_exists;
+      else if (/password should|at least/i.test(text)) known = AUTH_ERRORS.weak_password;
+      else if (/signups? not allowed/i.test(text)) known = AUTH_ERRORS.signup_disabled;
+      else if (/rate limit/i.test(text)) known = AUTH_ERRORS.over_request_rate_limit;
     }
-    return fetch(url, options).then(function (response) {
-      return response.json().catch(function () { return {}; }).then(function (data) {
-        /* Le serveur explique déjà l'échec en français : on le reprend tel quel. */
-        if (!response.ok) throw new Error(data.error || 'Connexion impossible pour le moment.');
-        return data;
+    return tr(known || 'Connexion impossible pour le moment.');
+  }
+
+  /* Pont vers le back-office, servi par le serveur local seulement. Un site
+     statique répond par une page d'erreur sans JSON : on l'annonce alors. */
+  function openBackOffice(email, password) {
+    return fetch('/api/compte/admin', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+      body: JSON.stringify({ email: email, password: password })
+    }).catch(function () { return null; }).then(function (response) {
+      if (!response) throw localError(BACKOFFICE_LOCAL);
+      return response.json().catch(function () { return null; }).then(function (data) {
+        if (response.ok && data && data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        if (data && typeof data.error === 'string') throw localError(data.error);
+        throw localError(BACKOFFICE_LOCAL);
       });
     });
   }
@@ -1737,6 +1777,14 @@
     var offline = $('[data-account-offline]', root);
     var intro = $('[data-account-intro]');
     var tabs = $$('[data-account-tab]', root);
+    var loginForm = $('[data-account-form="login"]', root);
+    var registerForm = $('[data-account-form="register"]', root);
+    var config = window.SITE_AUTH || {};
+    var adminEmails = config.adminEmails || [];
+
+    function isShopAddress(email) {
+      return adminEmails.indexOf(String(email || '').trim().toLowerCase()) !== -1;
+    }
 
     function show(panel) {
       [loading, guest, member, offline].forEach(function (el) { el.hidden = el !== panel; });
@@ -1754,16 +1802,27 @@
       show(guest);
     }
 
-    function renderMember(customer) {
-      $('[data-account-name]', root).textContent = tr('Bonjour') + ' ' + (customer.name || customer.email);
-      $('[data-account-email]', root).textContent = customer.email;
-      $('[data-account-since]', root).textContent = customer.createdAt
-        ? new Date(customer.createdAt).toLocaleDateString(document.documentElement.lang || 'fr',
+    function renderMember(user) {
+      var meta = user.user_metadata || {};
+      $('[data-account-name]', root).textContent = tr('Bonjour') + ' ' + (meta.full_name || meta.name || user.email);
+      $('[data-account-email]', root).textContent = user.email;
+      $('[data-account-since]', root).textContent = user.created_at
+        ? new Date(user.created_at).toLocaleDateString(document.documentElement.lang || 'fr',
           { day: 'numeric', month: 'long', year: 'numeric' })
         : '—';
       if (intro) intro.textContent = tr('Retrouvez ici les informations de votre compte.');
       show(member);
     }
+
+    /* Sans l'adresse du projet et sa clé, figées au build, les comptes clients
+       sont fermés. Le formulaire reste affiché : l'adresse de la boutique
+       ouvre le back-office sans passer par Supabase. */
+    var CLOSED = 'L’espace client n’est pas encore ouvert.';
+    var client = config.supabase && window.supabase && window.supabase.createClient
+      ? window.supabase.createClient(config.supabase.url, config.supabase.key, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      })
+      : null;
 
     function selectTab(name, focusTab) {
       tabs.forEach(function (tab) {
@@ -1789,7 +1848,12 @@
       });
     });
 
-    /* Envoi commun : bouton bloqué, message d'erreur affiché, mot de passe
+    function ok(note, message) {
+      note.textContent = tr(message);
+      note.classList.add('is-ok');
+    }
+
+    /* Envoi commun : bouton bloqué, message d'erreur traduit, mot de passe
        vidé en cas d'échec. */
     function bind(form, run) {
       var note = $('[data-account-note]', form);
@@ -1807,8 +1871,8 @@
         note.classList.remove('is-ok');
         submit.disabled = true;
         submit.textContent = tr('Un instant…');
-        Promise.resolve().then(function () { return run(values); }).catch(function (error) {
-          note.textContent = tr(error && error.message ? error.message : 'Connexion impossible pour le moment.');
+        Promise.resolve().then(function () { return run(values, note); }).catch(function (error) {
+          note.textContent = authMessage(error);
           var password = form.querySelector('[type="password"]');
           if (password) password.value = '';
         }).then(function () {
@@ -1818,33 +1882,50 @@
       });
     }
 
-    bind($('[data-account-form="login"]', root), function (values) {
-      return accountRequest('/api/compte/connexion', {
-        email: values.email.trim(),
-        password: values.password
-      }).then(function (data) {
-        /* L'adresse de la boutique n'a pas de fiche client : le serveur
-           ouvre la session du back-office et indique où aller. */
-        if (data.redirect) {
-          window.location.href = data.redirect;
-          return;
-        }
-        renderMember(data.customer);
-      });
+    bind(loginForm, function (values) {
+      var email = values.email.trim();
+      if (isShopAddress(email)) return openBackOffice(email, values.password);
+      if (!client) throw localError(CLOSED);
+      return client.auth.signInWithPassword({ email: email, password: values.password })
+        .then(function (result) {
+          if (result.error) throw result.error;
+          renderMember(result.data.user);
+        });
     });
 
-    bind($('[data-account-form="register"]', root), function (values) {
-      return accountRequest('/api/compte/inscription', {
-        name: values.name.trim(),
-        email: values.email.trim(),
-        password: values.password
-      }).then(function (data) { renderMember(data.customer); });
+    bind(registerForm, function (values, note) {
+      var email = values.email.trim();
+      if (isShopAddress(email)) {
+        throw localError('Cette adresse est celle de la boutique. Utilisez l’onglet « Se connecter ».');
+      }
+      if (!client) throw localError(CLOSED);
+      return client.auth.signUp({
+        email: email,
+        password: values.password,
+        options: { data: { full_name: values.name.trim() } }
+      }).then(function (result) {
+        if (result.error) throw result.error;
+        /* Confirmation d'adresse désactivée chez Supabase : la session est
+           ouverte tout de suite. */
+        if (result.data.session) {
+          renderMember(result.data.user);
+          return;
+        }
+        /* Confirmation encore active : Supabase ne dit pas qu'une adresse est
+           prise, il renvoie un utilisateur sans identité. */
+        var user = result.data.user;
+        if (user && Array.isArray(user.identities) && !user.identities.length) {
+          throw { code: 'user_already_exists' };
+        }
+        registerForm.reset();
+        ok(note, 'Compte créé. Confirmez votre adresse avec le lien reçu par e-mail, puis connectez-vous.');
+      });
     });
 
     var logout = $('[data-account-logout]', root);
     logout.addEventListener('click', function () {
       logout.disabled = true;
-      accountRequest('/api/compte/deconnexion', {}).catch(function () {}).then(function () {
+      Promise.resolve(client && client.auth.signOut()).catch(function () {}).then(function () {
         logout.disabled = false;
         $$('[data-account-form]', root).forEach(function (form) { form.reset(); });
         renderGuest();
@@ -1852,13 +1933,22 @@
       });
     });
 
-    /* Le site est aussi publié en pages statiques : sans serveur derrière,
-       la route n'existe pas et l'espace client s'annonce fermé. */
-    accountRequest('/api/compte').then(function (data) {
-      if (data.customer) return renderMember(data.customer);
+    if (!client) {
+      renderGuest();
+      return;
+    }
+
+    client.auth.getSession().then(function (result) {
+      /* Retour d'un lien Supabase : l'adresse est nettoyée pour qu'un
+         rechargement ne rejoue rien. */
+      if (window.location.hash.indexOf('access_token') !== -1 || window.location.search.indexOf('code=') !== -1) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+      var session = result.data && result.data.session;
+      if (session) return renderMember(session.user);
       renderGuest();
     }).catch(function () {
-      closed(tr('L’espace client n’est pas disponible pour le moment.'));
+      closed(tr('Connexion impossible pour le moment.'));
     });
   }
 
