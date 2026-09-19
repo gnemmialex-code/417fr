@@ -1694,12 +1694,15 @@ function build() {
   }, null, 2));
 
   write('sitemap.xml', buildSitemap(urls));
-  write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /preview\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+  write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /preview\nDisallow: /admin\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 
   copyDir(path.join(SRC, 'assets'), path.join(DIST, 'assets'));
   copyDir(path.join(SRC, 'media'), path.join(DIST, 'media'));
   /* Aperçu mobile : la même page qu'en local, publiée avec le site. */
   copyDir(path.join(SRC, 'preview'), path.join(DIST, 'preview'));
+  /* Styles et scripts du back-office, servis tels quels en ligne. Ses pages
+     HTML, elles, passent par api/backoffice.js, qui vérifie la session. */
+  copyDir(path.join(SRC, 'admin', 'assets'), path.join(DIST, 'admin', 'assets'));
 
   console.log('Site généré dans /dist');
   console.log(`  ${products.length} produits, ${collections.length} collections, ${urls.length} URL`);

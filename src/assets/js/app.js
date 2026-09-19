@@ -1708,8 +1708,8 @@
      fonctionne aussi sur le site publié, où il n'y a pas de serveur Node.
 
      Seule exception : l'adresse de la boutique. Elle n'a pas de compte
-     client ; avec le mot de passe du back-office, elle ouvre /admin grâce au
-     serveur local. En ligne, ce serveur n'existe pas et la page le dit. */
+     client ; avec le mot de passe du back-office, elle ouvre /admin, en
+     local comme en ligne. */
 
   var AUTH_ERRORS = {
     invalid_credentials: 'E-mail ou mot de passe incorrect.',
@@ -1723,7 +1723,7 @@
     signup_disabled: 'Les inscriptions sont fermées pour le moment.'
   };
 
-  var BACKOFFICE_LOCAL = 'Le back-office s’ouvre depuis le poste de gestion, avec « npm run dev ». Il n’est pas accessible sur le site en ligne.';
+  var BACKOFFICE_LOCAL = 'Le back-office est injoignable pour le moment. Réessayez dans quelques instants.';
 
   /* Erreur rédigée par la page elle-même, affichée telle quelle. */
   function localError(message) {
@@ -1746,8 +1746,9 @@
     return tr(known || 'Connexion impossible pour le moment.');
   }
 
-  /* Pont vers le back-office, servi par le serveur local seulement. Un site
-     statique répond par une page d'erreur sans JSON : on l'annonce alors. */
+  /* Pont vers le back-office : server.js en local, api/backoffice.js en
+     ligne. Une réponse sans JSON (fonction absente, réseau coupé) est
+     annoncée comme une indisponibilité. */
   function openBackOffice(email, password) {
     return fetch('/api/compte/admin', {
       method: 'POST',

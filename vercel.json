@@ -6,6 +6,16 @@
   "framework": null,
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/backoffice.js": {
+      "includeFiles": "src/admin/*.html"
+    }
+  },
+  "rewrites": [
+    { "source": "/admin", "destination": "/api/backoffice?route=admin" },
+    { "source": "/admin/:path((?!assets/).*)", "destination": "/api/backoffice?route=admin/:path" },
+    { "source": "/api/:path((?!contact$|backoffice$).*)", "destination": "/api/backoffice?route=api/:path" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
