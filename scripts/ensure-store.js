@@ -6,6 +6,9 @@
    ========================================================================== */
 'use strict';
 
+/* ADMIN_PASSWORD est lu dans .env.local lors de la première création. */
+require('../lib/env');
+
 const path = require('path');
 const { execFileSync } = require('child_process');
 const store = require('../lib/store');

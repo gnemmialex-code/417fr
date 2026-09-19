@@ -10,6 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const store = require('../lib/store');
+const supabase = require('../lib/supabase');
 
 const ROOT = path.join(__dirname, '..');
 const readJson = (f) => JSON.parse(fs.readFileSync(path.join(ROOT, 'data', f), 'utf8'));
@@ -398,6 +399,11 @@ const result = store.update((data) => {
 
   /* La boîte de réception des formulaires de la boutique. */
   if (!Array.isArray(data.messages)) data.messages = [];
+
+  /* L'adresse de la boutique, posée sur le compte administrateur : elle sert
+     d'identifiant et ouvre le back-office depuis l'espace client. */
+  const admin = data.users.find((u) => u.username === 'admin');
+  if (admin && !admin.email) admin.email = supabase.ADMIN_EMAILS[0];
 
   /* Les pays enregistrés avant la détection automatique n'ont ni code ISO ni
      langue : on les complète depuis le catalogue versionné, par nom. */

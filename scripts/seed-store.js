@@ -12,6 +12,7 @@ const crypto = require('crypto');
 
 const store = require('../lib/store');
 const auth = require('../lib/auth');
+const supabase = require('../lib/supabase');
 
 const ROOT = path.join(__dirname, '..');
 const args = process.argv.slice(2);
@@ -110,6 +111,7 @@ const data = store.emptyStore();
 
 data.users = [{
   username: 'admin',
+  email: supabase.ADMIN_EMAILS[0],
   salt: credentials.salt,
   hash: credentials.hash,
   role: 'Administrateur',

@@ -1701,6 +1701,167 @@
     });
   }
 
+  /* ---------- Espace client ---------- */
+
+  /* Les comptes vivent sur le serveur de la boutique : un e-mail, un mot de
+     passe, et c'est tout. Pas de confirmation d'adresse, pas de fournisseur
+     externe. La page demande à /api/compte qui est connecté, puis montre le
+     panneau correspondant. */
+
+  function accountRequest(url, payload) {
+    var options = {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'fetch' }
+    };
+    if (payload) {
+      options.method = 'POST';
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(payload);
+    }
+    return fetch(url, options).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        /* Le serveur explique déjà l'échec en français : on le reprend tel quel. */
+        if (!response.ok) throw new Error(data.error || 'Connexion impossible pour le moment.');
+        return data;
+      });
+    });
+  }
+
+  function initAccount() {
+    var root = $('[data-account]');
+    if (!root) return;
+
+    var loading = $('[data-account-loading]', root);
+    var guest = $('[data-account-guest]', root);
+    var member = $('[data-account-member]', root);
+    var offline = $('[data-account-offline]', root);
+    var intro = $('[data-account-intro]');
+    var tabs = $$('[data-account-tab]', root);
+
+    function show(panel) {
+      [loading, guest, member, offline].forEach(function (el) { el.hidden = el !== panel; });
+    }
+
+    function closed(message) {
+      offline.textContent = message + (window.SITE_FORMS && window.SITE_FORMS.email
+        ? ' ' + tr('Pour toute question, écrivez-nous à') + ' ' + window.SITE_FORMS.email
+        : '');
+      show(offline);
+    }
+
+    function renderGuest() {
+      if (intro) intro.textContent = tr('Connectez-vous ou créez votre compte en quelques secondes.');
+      show(guest);
+    }
+
+    function renderMember(customer) {
+      $('[data-account-name]', root).textContent = tr('Bonjour') + ' ' + (customer.name || customer.email);
+      $('[data-account-email]', root).textContent = customer.email;
+      $('[data-account-since]', root).textContent = customer.createdAt
+        ? new Date(customer.createdAt).toLocaleDateString(document.documentElement.lang || 'fr',
+          { day: 'numeric', month: 'long', year: 'numeric' })
+        : '—';
+      if (intro) intro.textContent = tr('Retrouvez ici les informations de votre compte.');
+      show(member);
+    }
+
+    function selectTab(name, focusTab) {
+      tabs.forEach(function (tab) {
+        var active = tab.getAttribute('data-account-tab') === name;
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        tab.tabIndex = active ? 0 : -1;
+        if (active && focusTab) tab.focus();
+      });
+      $$('[data-account-form]', root).forEach(function (form) {
+        form.hidden = form.getAttribute('data-account-form') !== name;
+      });
+      var first = $('[data-account-form="' + name + '"] input', root);
+      if (first && !focusTab) first.focus();
+    }
+
+    tabs.forEach(function (tab, index) {
+      tab.addEventListener('click', function () { selectTab(tab.getAttribute('data-account-tab')); });
+      tab.addEventListener('keydown', function (event) {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+        event.preventDefault();
+        var next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        selectTab(next.getAttribute('data-account-tab'), true);
+      });
+    });
+
+    /* Envoi commun : bouton bloqué, message d'erreur affiché, mot de passe
+       vidé en cas d'échec. */
+    function bind(form, run) {
+      var note = $('[data-account-note]', form);
+      var submit = form.querySelector('[type="submit"]');
+      var label = submit.textContent;
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        var values = {};
+        $$('input', form).forEach(function (field) { values[field.name] = field.value; });
+        note.textContent = '';
+        note.classList.remove('is-ok');
+        submit.disabled = true;
+        submit.textContent = tr('Un instant…');
+        Promise.resolve().then(function () { return run(values); }).catch(function (error) {
+          note.textContent = tr(error && error.message ? error.message : 'Connexion impossible pour le moment.');
+          var password = form.querySelector('[type="password"]');
+          if (password) password.value = '';
+        }).then(function () {
+          submit.disabled = false;
+          submit.textContent = label;
+        });
+      });
+    }
+
+    bind($('[data-account-form="login"]', root), function (values) {
+      return accountRequest('/api/compte/connexion', {
+        email: values.email.trim(),
+        password: values.password
+      }).then(function (data) {
+        /* L'adresse de la boutique n'a pas de fiche client : le serveur
+           ouvre la session du back-office et indique où aller. */
+        if (data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        renderMember(data.customer);
+      });
+    });
+
+    bind($('[data-account-form="register"]', root), function (values) {
+      return accountRequest('/api/compte/inscription', {
+        name: values.name.trim(),
+        email: values.email.trim(),
+        password: values.password
+      }).then(function (data) { renderMember(data.customer); });
+    });
+
+    var logout = $('[data-account-logout]', root);
+    logout.addEventListener('click', function () {
+      logout.disabled = true;
+      accountRequest('/api/compte/deconnexion', {}).catch(function () {}).then(function () {
+        logout.disabled = false;
+        $$('[data-account-form]', root).forEach(function (form) { form.reset(); });
+        renderGuest();
+        selectTab('login');
+      });
+    });
+
+    /* Le site est aussi publié en pages statiques : sans serveur derrière,
+       la route n'existe pas et l'espace client s'annonce fermé. */
+    accountRequest('/api/compte').then(function (data) {
+      if (data.customer) return renderMember(data.customer);
+      renderGuest();
+    }).catch(function () {
+      closed(tr('L’espace client n’est pas disponible pour le moment.'));
+    });
+  }
+
   /* ---------- Retour en haut ---------- */
 
   function initToTop() {
@@ -1737,6 +1898,7 @@
   initRegion();
   initConsent();
   initForms();
+  initAccount();
   initToTop();
   initCartCode();
   renderCart();

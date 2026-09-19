@@ -23,7 +23,7 @@ if (!store.exists()) {
 }
 
 const result = store.update((data) => {
-  const user = data.users.find((u) => u.username === username);
+  const user = data.users.find((u) => u.username === username || u.email === username);
   if (!user) return { error: 'Compte « ' + username + ' » introuvable.' };
   const next = auth.hashPassword(password);
   user.salt = next.salt;

@@ -227,6 +227,8 @@ api/             Fonctions servies par Vercel
 lib/             Socle du back-office
   store.js         Base JSON, écritures atomiques
   auth.js          Hachage scrypt, sessions signées, anti-force brute
+  supabase.js      Supabase Auth : configuration, vérification des sessions
+  env.js           Lecture de .env.local, sans dépendance
   admin-api.js     Règles métier, statistiques, bordereau de livraison
 src/admin/       Interface du back-office (connexion, tableau de bord)
 data/            Données extraites de la boutique Shopify d'origine
@@ -398,6 +400,69 @@ messagerie lui écrit directement.
 **La rubrique Messages du back-office ne se remplit qu'en local.** En ligne les
 messages arrivent dans la boîte mail, pas dans `data/store.json`.
 
+## Espace client
+
+L'icône en forme de personne de l'en-tête, entre la recherche et le panier,
+mène à `/pages/compte`. Les comptes sont gérés par **Supabase Auth** : le site
+ne stocke aucun mot de passe client. Le visiteur peut :
+
+- continuer avec **Google** ;
+- créer un compte avec son nom, son e-mail et un mot de passe de huit
+  caractères au moins, puis confirmer son adresse par le lien reçu ;
+- se connecter, se déconnecter, et recevoir un lien **Mot de passe oublié**
+  qui le ramène sur la page pour en choisir un nouveau.
+
+La page est exclue du plan de site et marquée `noindex`. Le client Supabase
+(`@supabase/supabase-js` depuis jsDelivr) n'est chargé que sur elle et sur la
+connexion du back-office. Sans configuration, la page annonce que l'espace
+client n'est pas encore ouvert.
+
+### Configuration
+
+Tout se règle dans `.env.local`, non versionné ; `.env.example` en est le
+modèle. `build.js` et `server.js` le lisent au démarrage, sans dépendance.
+
+| Variable | Rôle |
+| --- | --- |
+| `SUPABASE_URL` | Adresse du projet, `https://<ref>.supabase.co`. |
+| `SUPABASE_PUBLISHABLE_KEY` | Clé publique (`sb_publishable_…` ou ancienne clé `anon`). Jamais la clé secrète. `SUPABASE_ANON_KEY` est aussi lue. |
+| `ADMIN_EMAILS` | Adresses qui ouvrent le back-office, séparées par des virgules. Par défaut `contact@417france.com`. |
+
+La configuration est écrite dans la page au moment du build : **en ligne, les
+mêmes variables doivent être déclarées dans Vercel**, puis le site redéployé.
+
+Côté Supabase, trois réglages, rappelés en fin de `.env.local` :
+
+1. **Authentication → URL Configuration** : Site URL de production, et dans
+   Redirect URLs `http://localhost:4170/**` et l'adresse en ligne suivie de `/**`.
+2. **Providers → Email** : activé, avec **Confirm email**. C'est lui qui
+   garantit que l'adresse de la boutique appartient bien à la boutique.
+3. **Providers → Google** : Client ID et Client Secret créés dans Google Cloud
+   Console, avec `https://<ref>.supabase.co/auth/v1/callback` comme URI de
+   redirection autorisée.
+
+### Connexion au back-office
+
+Trois chemins mènent à `/admin`, tous en local :
+
+- **Depuis l'espace client**, avec `contact@417france.com` : e-mail et mot de
+  passe Supabase, ou Google si l'adresse est un compte Google Workspace. La
+  page présente son jeton à `/api/admin-session` ; le serveur le fait vérifier
+  par Supabase, exige une adresse confirmée et présente dans `ADMIN_EMAILS`,
+  puis ouvre la session du back-office.
+- **Depuis `/admin/login`**, bouton Google ou e-mail et mot de passe Supabase,
+  par la même vérification.
+- **Depuis `/admin/login`**, identifiant `admin` ou `contact@417france.com` avec
+  le mot de passe local de `data/store.json`. Il reste le recours si Supabase
+  est injoignable.
+
+Pour créer le compte Supabase de la boutique : dans l'espace client, onglet
+**Créer un compte** avec `contact@417france.com`, puis cliquer le lien de
+confirmation reçu dans cette boîte.
+
+En ligne, le back-office n'étant pas déployé, l'adresse de la boutique se
+connecte comme un client et la page explique où ouvrir le back-office.
+
 ## Icônes
 
 `node scripts/make-icons.js` dessine le jeu complet dans `src/assets/icons` :
@@ -422,7 +487,7 @@ Quatre écarts sont volontaires :
 4. **Collection renommée** : le handle `produit-pour-le-visage` contient en
    réalité les soins du corps ; elle s'intitule ici « Produits pour le corps ».
 
-Le paiement, les comptes clients et le géolocalisateur de boutiques sont des
+Le paiement et le géolocalisateur de boutiques sont des
 maquettes fonctionnelles : il n'y a pas de back-office derrière.
 
 Les textes légaux repris de Shopify décrivent encore Shopify comme hébergeur et
@@ -437,6 +502,5 @@ python scripts/fetch-images.py
 node build.js
 node scripts/check.js
 ```
-#   4 1 7 f r 
- 
- 
+# 417fr
+

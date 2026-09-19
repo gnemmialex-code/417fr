@@ -16,3 +16,8 @@ data/store.json.tmp
 Thumbs.db
 
 .vercel
+
+# Variables locales : clés Supabase, mots de passe
+.env
+.env.local
+.env.*.local

@@ -5,19 +5,27 @@
    ========================================================================== */
 'use strict';
 
+/* Charge .env.local avant tout le reste : ADMIN_EMAILS, ADMIN_PASSWORD,
+   SITE_URL et les clés y sont lues. */
+require('./lib/env');
+
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const store = require('./lib/store');
+const adminAccount = require('./lib/admin-account');
 const auth = require('./lib/auth');
 const admin = require('./lib/admin-api');
+const customers = require('./lib/customers');
 
 const DIST = path.join(__dirname, 'dist');
 const ADMIN_DIR = path.join(__dirname, 'src', 'admin');
 const PREVIEW_DIR = path.join(__dirname, 'src', 'preview');
 const PORT = Number(process.argv[2] || process.env.PORT || 4170);
 const COOKIE = 'f417_session';
+/* Cookie de l'espace client, distinct de celui du back-office. */
+const CLIENT_COOKIE = 'f417_client';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -120,7 +128,19 @@ function contactAllowed(ip) {
 }
 
 function session(req) {
-  return auth.verify(auth.readCookie(req.headers.cookie, COOKIE));
+  const payload = auth.verify(auth.readCookie(req.headers.cookie, COOKIE));
+  /* Une session du back-office porte toujours un rôle : exiger ce champ
+     empêche qu'un jeton d'une autre origine ouvre l'administration. */
+  return payload && payload.role ? payload : null;
+}
+
+function clientSession(req) {
+  return customers.fromToken(auth.readCookie(req.headers.cookie, CLIENT_COOKIE));
+}
+
+function setClientCookie(res, token) {
+  res.setHeader('Set-Cookie', CLIENT_COOKIE + '=' + encodeURIComponent(token)
+    + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + customers.SESSION_DAYS * 24 * 3600);
 }
 
 function resolveStatic(root, pathname) {
@@ -182,6 +202,63 @@ async function handleApi(req, res, pathname) {
       message: body.message
     });
     if (result.error) return sendJson(res, 400, { error: result.error });
+    return sendJson(res, 200, { ok: true });
+  }
+
+  /* ----- Espace client -----
+     Ces routes précèdent le contrôle de session du back-office : un visiteur
+     doit pouvoir s'inscrire et se connecter sans compte d'administration. */
+
+  if (pathname === '/api/compte' && req.method === 'GET') {
+    return sendJson(res, 200, { customer: clientSession(req) });
+  }
+
+  if (pathname === '/api/compte/inscription' && req.method === 'POST') {
+    const body = await readBody(req);
+
+    /* L'adresse de la boutique sert au back-office : en faire un compte client
+       rendrait la connexion ambiguë. */
+    if (adminAccount.adminEmails().indexOf(customers.normalizeEmail(body.email)) !== -1) {
+      return sendJson(res, 400, {
+        error: 'Cette adresse est celle de la boutique. Utilisez l’onglet « Se connecter ».'
+      });
+    }
+
+    const result = customers.register({
+      name: body.name,
+      email: body.email,
+      password: body.password
+    });
+    if (result.error) return sendJson(res, 400, { error: result.error });
+    setClientCookie(res, result.token);
+    return sendJson(res, 200, { customer: result.customer });
+  }
+
+  if (pathname === '/api/compte/connexion' && req.method === 'POST') {
+    const body = await readBody(req);
+
+    /* L'adresse de la boutique ouvre le back-office depuis ce formulaire :
+       c'est le point d'entrée que connaissent les gérants, qui n'ont pas à
+       retenir une seconde adresse. Le mot de passe vérifié est celui du
+       back-office, pas un compte client. */
+    const email = customers.normalizeEmail(body.email);
+    if (adminAccount.adminEmails().indexOf(email) !== -1) {
+      const admis = auth.login(email, body.password);
+      if (admis.error) return sendJson(res, 401, { error: admis.error });
+      res.setHeader('Set-Cookie', COOKIE + '=' + encodeURIComponent(admis.token)
+        + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + auth.SESSION_HOURS * 3600);
+      store.update(function (data) { store.log(data, 'Connexion', admis.user.username); });
+      return sendJson(res, 200, { redirect: '/admin' });
+    }
+
+    const result = customers.login(body.email, body.password);
+    if (result.error) return sendJson(res, 401, { error: result.error });
+    setClientCookie(res, result.token);
+    return sendJson(res, 200, { customer: result.customer });
+  }
+
+  if (pathname === '/api/compte/deconnexion' && req.method === 'POST') {
+    res.setHeader('Set-Cookie', CLIENT_COOKIE + '=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0');
     return sendJson(res, 200, { ok: true });
   }
 
@@ -262,15 +339,33 @@ const server = http.createServer(function (req, res) {
 });
 
 server.listen(PORT, function () {
+  /* Le compte du back-office suit .env.local : on l'aligne avant d'annoncer
+     les identifiants, pour que ce qui est affiché soit ce qui fonctionne. */
+  const admin417 = adminAccount.sync();
+
   console.log('');
   console.log('  417 France');
   console.log('  Boutique     http://localhost:' + PORT);
   console.log('  Back-office  http://localhost:' + PORT + '/admin');
   console.log('  Aperçu mobile http://localhost:' + PORT + '/preview');
   console.log('');
-  if (!store.exists()) {
-    console.log('  Base absente : lancez « node scripts/seed-store.js » pour créer le compte admin.');
-    console.log('');
+
+  if (admin417.ready) {
+    console.log('  Connexion au back-office');
+    console.log('    Adresse      ' + (admin417.email || '(aucune)'));
+    console.log('    Identifiant  ' + admin417.username + '  (les deux fonctionnent)');
+    console.log('    Mot de passe ' + (admin417.hasPassword
+      ? 'celui de ADMIN_PASSWORD dans .env.local'
+      : 'aucun : lancez « npm run password -- <mot de passe> »'));
+    if (admin417.changes.length) {
+      console.log('    Mis à jour depuis .env.local : ' + admin417.changes.join(', ') + '.');
+    }
   }
+
+  (admin417.warnings || []).forEach(function (warning) {
+    console.log('  ! ' + warning);
+  });
+
+  console.log('');
   console.log('  Ctrl+C pour arrêter le serveur.');
 });

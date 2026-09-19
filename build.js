@@ -5,6 +5,9 @@
    ========================================================================== */
 'use strict';
 
+/* SITE_URL et les autres variables viennent de .env.local. */
+require('./lib/env');
+
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -434,7 +437,7 @@ function header(currentPath) {
     <div class="header__tools">
       <button type="button" class="ibtn ibtn--text" data-open-drawer="region" aria-label="Région et devise"><span data-region-label>EUR</span></button>
       <button type="button" class="ibtn" data-open-drawer="search" aria-label="Rechercher">${icons.search}</button>
-      <a class="ibtn" href="/pages/contact" aria-label="Nous contacter">${icons.user}</a>
+      <a class="ibtn" href="/pages/compte" aria-label="Espace client"${currentPath === '/pages/compte' ? ' aria-current="page"' : ''}>${icons.user}</a>
       <button type="button" class="ibtn" data-open-drawer="cart" aria-label="Ouvrir le panier">
         ${icons.bag}<span class="cart-count" data-cart-count hidden>0</span>
       </button>
@@ -637,7 +640,8 @@ function layout(options) {
   const {
     title, description = site.description, body,
     currentPath = '/', hasHero = false, image = site.socialImage,
-    canonical = currentPath, extraHead = '', ogType = 'website', preloadImage = ''
+    canonical = currentPath, extraHead = '', ogType = 'website', preloadImage = '',
+    robots = 'index, follow, max-image-preview:large, max-snippet:-1'
   } = options;
 
   const catalogJson = JSON.stringify(products.map((p) => ({
@@ -653,7 +657,7 @@ function layout(options) {
 <title>${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(metaDescription(description))}">
 <link rel="canonical" href="${SITE_URL}${canonical}">
-<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="robots" content="${robots}">
 <meta property="og:site_name" content="${escapeHtml(site.name)}">
 <meta property="og:type" content="${ogType}">
 <meta property="og:locale" content="fr_FR">
@@ -1445,6 +1449,66 @@ function contactPage() {
   });
 }
 
+/** Espace client, porté par le serveur de la boutique : e-mail et mot de
+    passe, rien d'autre. Pas de confirmation d'adresse ni de fournisseur
+    externe. La page est la même pour tous : le script demande au serveur qui
+    est connecté et montre le bon panneau. */
+function accountPage() {
+  const body = `${breadcrumb([{ label: 'Accueil', url: '/' }, { label: 'Espace client' }])}
+<section class="container page-head">
+  <h1>Espace client</h1>
+  <p data-account-intro>Connectez-vous ou créez votre compte en quelques secondes.</p>
+</section>
+<section class="container account" data-account>
+  <p class="account__status" data-account-loading>Chargement…</p>
+
+  <div class="account__card" data-account-guest hidden>
+    <div class="account__tabs" role="tablist" aria-label="Espace client">
+      <button type="button" role="tab" id="tab-login" aria-controls="panel-login" aria-selected="true" data-account-tab="login">Se connecter</button>
+      <button type="button" role="tab" id="tab-register" aria-controls="panel-register" aria-selected="false" tabindex="-1" data-account-tab="register">Créer un compte</button>
+    </div>
+
+    <form class="form account__form" id="panel-login" role="tabpanel" aria-labelledby="tab-login" data-account-form="login" novalidate>
+      <div class="field"><label for="login-email">E-mail</label><input id="login-email" name="email" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="login-password">Mot de passe</label><input id="login-password" name="password" type="password" autocomplete="current-password" required></div>
+      <button type="submit" class="btn btn--block">Se connecter</button>
+      <p class="account__note" data-account-note role="alert"></p>
+    </form>
+
+    <form class="form account__form" id="panel-register" role="tabpanel" aria-labelledby="tab-register" data-account-form="register" novalidate hidden>
+      <div class="field"><label for="register-name">Nom</label><input id="register-name" name="name" type="text" autocomplete="name" required></div>
+      <div class="field"><label for="register-email">E-mail</label><input id="register-email" name="email" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="register-password">Mot de passe</label><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required><small class="account__hint">8 caractères au minimum.</small></div>
+      <button type="submit" class="btn btn--block">Créer mon compte</button>
+      <p class="account__note" data-account-note role="alert"></p>
+      <p class="account__aside">En créant un compte, vous acceptez nos <a href="/policies/terms-of-service">conditions d’utilisation</a> et notre <a href="/policies/privacy-policy">politique de confidentialité</a>.</p>
+    </form>
+  </div>
+
+  <div class="account__card account__card--member" data-account-member hidden>
+    <p class="account__eyebrow">Connecté</p>
+    <h2 class="account__name" data-account-name></h2>
+    <dl class="account__details">
+      <div><dt>E-mail</dt><dd data-account-email></dd></div>
+      <div><dt>Client depuis</dt><dd data-account-since></dd></div>
+    </dl>
+    <div class="account__actions">
+      <a class="btn" href="/collections/all">Voir la boutique</a>
+      <button type="button" class="btn btn--outline" data-account-logout>Se déconnecter</button>
+    </div>
+  </div>
+
+  <p class="account__status" data-account-offline hidden></p>
+</section>`;
+
+  return layout({
+    title: `Espace client – ${site.name}`,
+    description: 'Connectez-vous à votre espace client 417 France ou créez votre compte.',
+    body, currentPath: '/pages/compte', canonical: '/pages/compte',
+    robots: 'noindex, follow'
+  });
+}
+
 function storeLocatorPage() {
   const mapSrc = 'https://www.google.com/maps?q=88+Bd+de+Courcelles,+75017+Paris&output=embed';
   const body = `${breadcrumb([{ label: 'Accueil', url: '/' }, { label: 'Points de vente' }])}
@@ -1575,6 +1639,9 @@ function build() {
   urls.push('/pages/livraison-et-retours');
   write(path.join('pages', 'contact', 'index.html'), contactPage());
   urls.push('/pages/contact');
+  /* Hors du plan de site : une page de connexion n'a rien à faire dans les
+     résultats de recherche. */
+  write(path.join('pages', 'compte', 'index.html'), accountPage());
   write(path.join('pages', 'store-locator', 'index.html'), storeLocatorPage());
   urls.push('/pages/store-locator');
 
