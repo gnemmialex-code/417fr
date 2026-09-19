@@ -1,9 +1,11 @@
 /* =============================================================================
    Fonction Vercel : le back-office sur le site en ligne.
 
-   vercel.json redirige ici /admin, /admin/login, /admin/bordereau/… et les
-   routes /api/* du back-office (sauf /api/contact, qui a sa propre fonction).
-   Le chemin d'origine arrive dans le paramètre « route ».
+   vercel.json redirige ici les routes /api/* du back-office (sauf
+   /api/contact, qui a sa propre fonction) et les bordereaux
+   /admin/bordereau/…, générés à la volée. Le chemin d'origine arrive dans le
+   paramètre « route ». Les pages /admin et /admin/login sont des fichiers
+   statiques (voir build.js) : elles ne contiennent aucune donnée.
 
    Les règles sont exactement celles du serveur local : elles vivent dans
    lib/backoffice-http.js. La base est chargée depuis Supabase Storage à

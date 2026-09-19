@@ -1700,9 +1700,11 @@ function build() {
   copyDir(path.join(SRC, 'media'), path.join(DIST, 'media'));
   /* Aperçu mobile : la même page qu'en local, publiée avec le site. */
   copyDir(path.join(SRC, 'preview'), path.join(DIST, 'preview'));
-  /* Styles et scripts du back-office, servis tels quels en ligne. Ses pages
-     HTML, elles, passent par api/backoffice.js, qui vérifie la session. */
-  copyDir(path.join(SRC, 'admin', 'assets'), path.join(DIST, 'admin', 'assets'));
+  /* Interface du back-office, publiée telle quelle pour le site en ligne :
+     ces pages ne contiennent aucune donnée. Tout passe par /api, qui exige
+     une session, et l'interface renvoie vers /admin/login sans elle.
+     En local, server.js les sert lui-même et contrôle la session avant. */
+  copyDir(path.join(SRC, 'admin'), path.join(DIST, 'admin'));
 
   console.log('Site généré dans /dist');
   console.log(`  ${products.length} produits, ${collections.length} collections, ${urls.length} URL`);
