@@ -9,6 +9,7 @@
   "rewrites": [
     { "source": "/admin/bordereau/:id", "destination": "/api/backoffice?route=admin/bordereau/:id" },
     { "source": "/admin/etiquette/:id", "destination": "/api/backoffice?route=admin/etiquette/:id" },
+    { "source": "/admin/recapitulatif/:id", "destination": "/api/backoffice?route=admin/recapitulatif/:id" },
     { "source": "/api/:path((?!contact$|backoffice$).*)", "destination": "/api/backoffice?route=api/:path" }
   ],
   "headers": [

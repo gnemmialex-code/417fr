@@ -560,9 +560,12 @@ l'étiquette à imprimer, puis le récapitulatif complet de la commande ; sans
 | `COLISSIMO_CONTRACT`, `COLISSIMO_PASSWORD` | Compte Colissimo entreprise. |
 
 Tout est facultatif. Le bouton n'apparaît que pour les transporteurs dont les
-identifiants sont renseignés ; pour les autres, la fiche commande renvoie vers
-le site du transporteur, où l'étiquette se fait à la main, et le numéro de
-suivi se saisit avec « Créer l'expédition ». Une erreur du transporteur est
+identifiants sont renseignés. Pour les autres, l'étiquette se fait à la main
+sur le site du transporteur (lien sur la fiche commande), puis **Bordereau**
+ouvre une fenêtre pour joindre son PDF et son numéro de suivi : la commande
+passe « En préparation » et l'expédition est créée. Ensuite, **Bordereau**
+ouvre l'étiquette suivie du récapitulatif ; **Récapitulatif**
+(`/admin/recapitulatif/<commande>`) ouvre le récapitulatif seul. Une erreur du transporteur est
 affichée telle quelle dans la fenêtre d'achat.
 
 ## Icônes

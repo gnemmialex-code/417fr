@@ -239,7 +239,7 @@
     var portal = state.settings.carriers.find(function (c) { return c.name === d.carrier; });
     var manual = !order.label && !canBuyLabel(order) && ['Annulée', 'Remboursée'].indexOf(order.status) === -1 && portal
       ? '<br><span class="cell-sub">Étiquette à créer sur <a href="' + esc(portal.portal) + '" target="_blank" rel="noopener">le site ' + esc(d.carrier) + '</a>'
-        + (d.relay ? ', point relais n° ' + esc(d.relay.id) : '') + ', puis saisissez le n° de suivi avec « Créer l’expédition ».</span>'
+        + (d.relay ? ', point relais n° ' + esc(d.relay.id) : '') + ', puis joignez le PDF avec « Bordereau ».</span>'
       : '';
     var mail = order.mail
       ? '<br><span class="cell-sub">E-mails : boutique ' + esc(order.mail.shop) + ' · client ' + esc(order.mail.customer) + '</span>'
@@ -486,7 +486,7 @@
         + '<td><select class="chip" style="border-radius:999px;padding:7px 12px" data-order-status="' + o.id + '">' + options + '</select></td>'
         + '<td class="actions">'
         + '<button type="button" class="btn btn--ghost btn--sm" data-order-detail="' + o.id + '">Détail</button>'
-        + '<a class="btn btn--ghost btn--sm" href="/admin/bordereau/' + o.id + '" target="_blank" rel="noopener">Bordereau</a>'
+        + bordereauButton(o, ' btn--sm')
         + '<button type="button" class="btn btn--ghost btn--sm" data-ship-new="' + o.id + '">Expédier</button>'
         + '</td></tr>';
     }).join('') : emptyRow(6, 'Aucune commande', 'Créez une commande ou modifiez les filtres.');
@@ -705,7 +705,7 @@
           : esc(s.tracking || '—')) + '</td>'
         + '<td>' + shipmentTag(s.status) + '</td>'
         + '<td class="actions">'
-        + '<a class="btn btn--ghost btn--sm" href="/admin/bordereau/' + esc(s.orderId) + '" target="_blank" rel="noopener">Bordereau</a>'
+        + bordereauButton(state.orders.find(function (o) { return o.id === s.orderId; }) || { id: s.orderId, label: true }, ' btn--sm')
         + '<button type="button" class="btn btn--ghost btn--sm" data-ship-edit="' + s.id + '">Modifier</button>'
         + '<button type="button" class="btn btn--ghost btn--sm" data-ship-delete="' + s.id + '">Supprimer</button>'
         + '</td></tr>';
@@ -735,7 +735,7 @@
       + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
       + '</section>'
       + '<section class="card"><div class="card__head"><h2>Portails transporteurs</h2></div>'
-      + '<p class="card__sub">Le bordereau de livraison se génère ici. L’étiquette d’affranchissement se crée sur le site du transporteur, puis vous reportez le numéro de suivi.</p>'
+      + '<p class="card__sub">Créez l’étiquette sur le site du transporteur, puis joignez son PDF et son numéro de suivi avec « Bordereau » : le bouton ouvre ensuite l’étiquette, suivie du récapitulatif.</p>'
       + '<div class="list">' + carriers + '</div></section>'
       + '</div>';
   }
@@ -1289,6 +1289,97 @@
     });
   }
 
+  /* « Bordereau » ouvre l'étiquette du transporteur. Tant qu'elle n'est pas
+     jointe à la commande, le bouton propose de l'ajouter. */
+  function bordereauButton(order, size) {
+    if (order.label) {
+      return '<a class="btn btn--ghost' + size + '" href="/admin/bordereau/' + esc(order.id) + '" target="_blank" rel="noopener">Bordereau</a>';
+    }
+    return '<button type="button" class="btn btn--ghost' + size + '" data-label-upload="' + esc(order.id) + '">Bordereau</button>';
+  }
+
+  document.addEventListener('click', function (event) {
+    var trigger = event.target.closest('[data-label-upload]');
+    if (!trigger) return;
+    event.preventDefault();
+    closeModal();
+    labelUploadForm(trigger.getAttribute('data-label-upload'));
+  });
+
+  /* Étiquette créée à la main sur le site du transporteur : on joint son PDF
+     et son numéro de suivi à la commande. */
+  function labelUploadForm(id) {
+    var order = state.orders.find(function (o) { return o.id === id; });
+    if (!order) return;
+    var d = order.delivery || {};
+    var current = order.label ? order.label.carrier : (d.carrier || '');
+    var portal = state.settings.carriers.find(function (c) { return c.name === current; });
+    var carrierOptions = state.settings.carriers.map(function (c) {
+      return '<option value="' + esc(c.name) + '"' + (c.name === current ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+    }).join('');
+    var where = d.relay
+      ? 'Point relais n° <strong>' + esc(d.relay.id) + '</strong> — ' + esc(d.relay.name) + ', ' + esc(d.relay.zip + ' ' + d.relay.city)
+      : d.address ? esc(d.address.address) + ', ' + esc(d.address.zip + ' ' + d.address.city) : '';
+
+    openModal({
+      title: (order.label ? 'Remplacer le bordereau — ' : 'Ajouter le bordereau — ') + order.ref,
+      body: (d.carrier
+          ? '<p style="margin-top:0"><strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + '<br>'
+            + '<span class="cell-sub">' + esc(order.customerName) + (where ? ' · ' + where : '') + '</span></p>'
+          : '')
+        + (portal
+          ? '<p class="cell-sub">1. Créez l’étiquette sur <a href="' + esc(portal.portal) + '" target="_blank" rel="noopener" style="text-decoration:underline">le site ' + esc(portal.name) + '</a>, puis téléchargez-la en PDF.<br>'
+            + '2. Joignez-la ici avec son numéro de suivi. « Bordereau » l’ouvrira ensuite, suivie du récapitulatif.</p>'
+          : '')
+        + '<div class="grid-2">'
+        + '<div class="field"><label for="u-carrier">Transporteur</label><select id="u-carrier">' + carrierOptions + '</select></div>'
+        + '<div class="field"><label for="u-tracking">N° de suivi</label><input id="u-tracking" type="text" required value="' + esc(order.label ? order.label.tracking : '') + '"></div>'
+        + '</div>'
+        + '<div class="grid-2">'
+        + '<div class="field"><label for="u-file">Étiquette (PDF)</label><input id="u-file" type="file" accept="application/pdf,.pdf" required></div>'
+        + '<div class="field"><label for="u-weight">Poids (kg, facultatif)</label><input id="u-weight" type="number" min="0" step="0.01" value="' + (order.label && order.label.weight ? order.label.weight : '') + '"></div>'
+        + '</div>'
+        + '<p id="u-error" style="color:#98362f;margin-bottom:0"></p>',
+      foot: '<button type="button" class="btn btn--ghost" data-close-modal>Annuler</button>'
+        + '<button type="button" class="btn" id="u-save">Enregistrer le bordereau</button>',
+      onOpen: function () {
+        var button = $('#u-save');
+        var fail = function (message) {
+          button.disabled = false;
+          button.textContent = 'Enregistrer le bordereau';
+          $('#u-error').textContent = message;
+        };
+        button.addEventListener('click', function () {
+          var file = $('#u-file').files[0];
+          var tracking = $('#u-tracking').value.trim();
+          if (!tracking) return fail('Indiquez le numéro de suivi.');
+          if (!file) return fail('Choisissez le fichier PDF de l’étiquette.');
+          if (file.size > 5 * 1024 * 1024) return fail('Fichier trop lourd (5 Mo au plus).');
+          button.disabled = true;
+          button.textContent = 'Enregistrement…';
+          $('#u-error').textContent = '';
+          var reader = new FileReader();
+          reader.onload = function () {
+            api('orders/label-upload', {
+              id: order.id,
+              carrier: $('#u-carrier').value,
+              tracking: tracking,
+              weight: Number($('#u-weight').value) || 0,
+              pdf: reader.result
+            }).then(function (result) {
+              if (result.state) { state = result.state; render(); }
+              closeModal();
+              toast('Bordereau enregistré : « Bordereau » l’ouvre désormais.');
+              orderDetail(order.id);
+            }).catch(function (err) { fail(err.message); });
+          };
+          reader.onerror = function () { fail('Lecture du fichier impossible.'); };
+          reader.readAsDataURL(file);
+        });
+      }
+    });
+  }
+
   /* Un bordereau s'achète pour une commande payée en ligne, pas annulée, qui
      n'en a pas encore. */
   function canBuyLabel(order) {
@@ -1380,7 +1471,9 @@
       wide: true,
       foot: '<button type="button" class="btn btn--danger left" id="order-delete">Supprimer</button>'
         + (canBuyLabel(order) ? '<button type="button" class="btn" id="order-label">Acheter le bordereau</button>' : '')
-        + '<a class="btn btn--ghost" href="/admin/bordereau/' + order.id + '" target="_blank" rel="noopener">Bordereau</a>'
+        + bordereauButton(order, '')
+        + (order.label ? '<button type="button" class="btn btn--ghost" data-label-upload="' + order.id + '">Remplacer l’étiquette</button>' : '')
+        + '<a class="btn btn--ghost" href="/admin/recapitulatif/' + order.id + '" target="_blank" rel="noopener">Récapitulatif</a>'
         + '<button type="button" class="btn btn--ghost" id="order-edit">Modifier</button>'
         + '<button type="button" class="btn" id="order-ship">Créer l’expédition</button>',
       onOpen: function () {
