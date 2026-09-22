@@ -289,6 +289,12 @@
     "Ouverture de la page de paiement…": "Opening the payment page…",
     "Le paiement n’a pas pu être ouvert. Réessayez dans un instant.": "The payment page could not be opened. Please try again shortly.",
     "Merci pour votre commande": "Thank you for your order",
-    "Retour à la boutique": "Back to the shop"
+    "Retour à la boutique": "Back to the shop",
+    "Commande n°": "Order no.",
+    "confirmée.": "confirmed.",
+    "Votre paiement est confirmé.": "Your payment is confirmed.",
+    "Confirmation de votre commande…": "Confirming your order…",
+    "Votre paiement est en cours de validation : vous recevrez un e-mail dès qu’il sera confirmé.": "Your payment is being validated: you will receive an e-mail as soon as it is confirmed.",
+    "Votre paiement est bien reçu. Vous recevrez la confirmation de votre commande par e-mail.": "Your payment has been received. You will receive your order confirmation by e-mail."
   }
 }

@@ -1520,7 +1520,8 @@ function checkoutPage() {
 function thankYouPage() {
   const body = `<section class="container page-head checkout-done" data-checkout-done>
   <h1>Merci pour votre commande</h1>
-  <p>Votre paiement est confirmé. Vous allez recevoir un reçu par e-mail. Votre colis part le jour même ou le lendemain (le lundi pour une commande du week-end), et nous vous envoyons son numéro de suivi dès l’expédition.</p>
+  <p class="checkout-done__ref" data-order-status>Confirmation de votre commande…</p>
+  <p>Vous allez recevoir une confirmation par e-mail. Votre colis part le jour même ou le lendemain (le lundi pour une commande du week-end), et nous vous envoyons son numéro de suivi dès l’expédition.</p>
   <p style="margin-top:30px"><a class="btn" href="/">Retour à la boutique</a></p>
 </section>`;
 

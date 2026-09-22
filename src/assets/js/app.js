@@ -1224,10 +1224,43 @@
     render();
   }
 
-  /* Retour de Stripe après paiement : le panier est soldé. */
+  /* Retour de Stripe après paiement : le site fait confirmer la session par
+     Stripe, ce qui enregistre la commande si la notification de Stripe n'est
+     pas encore arrivée. Quelques essais couvrent un paiement encore en cours. */
+  function confirmOrder(sessionId, status, attempt) {
+    fetch('/api/commande?session_id=' + encodeURIComponent(sessionId), { headers: { Accept: 'application/json' } })
+      .then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          if (!response.ok) throw new Error(data.error || '');
+          return data;
+        });
+      })
+      .then(function (data) {
+        if (data.status === 'paid') {
+          status.textContent = data.ref
+            ? tr('Commande n°') + ' ' + data.ref + ' ' + tr('confirmée.')
+            : tr('Votre paiement est confirmé.');
+        } else if (attempt < 5) {
+          window.setTimeout(function () { confirmOrder(sessionId, status, attempt + 1); }, 2000);
+        } else {
+          status.textContent = tr('Votre paiement est en cours de validation : vous recevrez un e-mail dès qu’il sera confirmé.');
+        }
+      })
+      .catch(function () {
+        if (attempt < 3) {
+          window.setTimeout(function () { confirmOrder(sessionId, status, attempt + 1); }, 2000);
+        } else {
+          status.textContent = tr('Votre paiement est bien reçu. Vous recevrez la confirmation de votre commande par e-mail.');
+        }
+      });
+  }
+
   function initCheckoutDone() {
     if (!$('[data-checkout-done]')) return;
-    if (!/[?&]session_id=/.test(window.location.search)) return;
+    var match = window.location.search.match(/[?&]session_id=([^&]+)/);
+    if (!match) return;
+    var status = $('[data-order-status]');
+    if (status) confirmOrder(decodeURIComponent(match[1]), status, 0);
     cart = [];
     writeJson(CART_KEY, cart);
     appliedCode = '';

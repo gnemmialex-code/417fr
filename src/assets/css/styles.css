@@ -829,6 +829,7 @@ body:not(.has-hero) main { padding-top: calc(var(--header-h) + var(--announce-h)
 .checkout__line img { width: 56px; height: 66px; object-fit: cover; border-radius: var(--r-xs); background: var(--bone-2); }
 .checkout__line small { display: block; color: var(--muted); font-size: 12px; }
 .checkout-done { padding-bottom: var(--space); }
+.checkout-done .checkout-done__ref { color: var(--ink); font-family: var(--font-display); font-size: 20px; }
 
 @media (max-width: 940px) {
   .checkout__grid { grid-template-columns: minmax(0, 1fr); }

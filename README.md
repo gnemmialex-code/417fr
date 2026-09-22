@@ -501,7 +501,12 @@ tableau en texte fixe, à tenir à jour à la main.
    (`checkout.session.completed`) et crée la commande dans le back-office :
    client créé ou retrouvé par e-mail, stock décrémenté, code compté, mode et
    point relais ou adresse sur la commande et le bordereau. Une notification
-   reçue deux fois ne crée qu'une commande. `charge.refunded` passe une commande
+   reçue deux fois ne crée qu'une commande. Le retour du client sur 
+   appelle aussi , qui relit la session chez Stripe et enregistre
+   la commande si la notification n'est pas encore arrivée : une commande payée
+   ne dépend jamais du seul webhook. La boutique et le client reçoivent alors un
+   courriel par Resend (, , ) ; son
+   état est noté sur la commande. En mode test, Stripe n'envoie aucun reçu. `charge.refunded` passe une commande
    intégralement remboursée en « Remboursée » et recrédite le stock.
 
 La recherche des points relais (`/api/relais`, `lib/relais.js`) interroge

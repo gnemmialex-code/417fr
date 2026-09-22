@@ -231,8 +231,11 @@
         ? 'À domicile<br><strong>' + esc(d.recipient || order.customerName) + '</strong><br>'
           + esc(d.address.address) + '<br>' + esc(d.address.zip + ' ' + d.address.city)
         : '';
+    var mail = order.mail
+      ? '<br><span class="cell-sub">E-mails : boutique ' + esc(order.mail.shop) + ' · client ' + esc(order.mail.customer) + '</span>'
+      : '';
     return '<div class="detail-box" style="margin-top:16px"><h3>Livraison choisie</h3><p>'
-      + '<strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + (where ? '<br>' + where : '') + '</p></div>';
+      + '<strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + (where ? '<br>' + where : '') + mail + '</p></div>';
   }
 
   function customerById(id) {
