@@ -233,6 +233,8 @@ lib/             Socle du back-office
   checkout.js      Paiement Stripe Checkout et commandes payées en ligne
   stripe.js        Client Stripe minimal, vérification des webhooks
   relais.js        Recherche des points relais Mondial Relay et Chronopost
+  labels.js        Bordereaux d'envoi Chronopost, Mondial Relay, Colissimo
+  mailer.js        Courriels de commande (Resend)
 src/admin/       Interface du back-office (connexion, tableau de bord)
 data/            Données extraites de la boutique Shopify d'origine
   store.json       Base du back-office : compte, stocks, clients, commandes
@@ -528,6 +530,37 @@ Dans le tableau de bord Stripe, le webhook pointe vers
 `charge.refunded`. Le site `.vercel.app` étant protégé par une connexion
 Vercel, Stripe ne peut l'atteindre : le webhook demande un domaine public. En
 local : `stripe listen --forward-to localhost:4170/api/stripe-webhook`.
+
+### Bordereaux d'envoi
+
+Sur la fiche d'une commande payée en ligne, **Acheter le bordereau** crée
+l'étiquette chez le transporteur choisi par le client (`lib/labels.js`), avec
+le poids du colis saisi (par défaut celui des Réglages) :
+
+| Mode | Service du transporteur | API |
+| --- | --- | --- |
+| Mondial Relay point relais ou locker | Point Relais / Locker (24R) | Connect API |
+| Chronopost point relais | Shop2Shop (5E) | ShippingServiceWS |
+| Chronopost point relais express | Chrono Relais 13h (86) | ShippingServiceWS |
+| Chronopost à domicile express | Chrono 13 (01) | ShippingServiceWS |
+| Colissimo à domicile | Domicile sans signature (DOM) | SLS generateLabel |
+
+L'étiquette est facturée par le transporteur sur le compte de la boutique. Le
+PDF est rangé avec la base (Supabase Storage, dossier `labels/` ; en local,
+`data/labels/`), la commande reçoit le numéro de suivi, passe « En
+préparation » et son expédition est créée. **Bordereau** montre alors
+l'étiquette à imprimer, puis le récapitulatif complet de la commande ; sans
+étiquette, il montre le récapitulatif seul. L'étiquette seule s'ouvre sur
+`/admin/etiquette/<commande>`.
+
+| Variable | Rôle |
+| --- | --- |
+| `CHRONOPOST_ACCOUNT`, `CHRONOPOST_PASSWORD` | Compte Chronopost. Vides : étiquettes « SPECIMEN » du compte de test. |
+| `MONDIAL_RELAY_LOGIN`, `MONDIAL_RELAY_PASSWORD`, `MONDIAL_RELAY_BRAND` | Accès Connect API de Mondial Relay. `MONDIAL_RELAY_SANDBOX=1` pour le bac à sable. |
+| `COLISSIMO_CONTRACT`, `COLISSIMO_PASSWORD` | Compte Colissimo entreprise. |
+
+Sans identifiants, l'achat répond par un message qui dit lesquels manquent ;
+une erreur du transporteur est affichée telle quelle dans la fenêtre d'achat.
 
 ## Icônes
 

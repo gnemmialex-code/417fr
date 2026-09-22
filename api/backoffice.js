@@ -5,7 +5,7 @@
    boutique (paiement, points relais, webhook Stripe), sauf /api/contact, qui
    a sa propre fonction, et les bordereaux
    /admin/bordereau/…, générés à la volée. Le chemin d'origine arrive dans le
-   paramètre « route ». Les pages /admin et /admin/login sont des fichiers
+   paramètre « route ». Les étiquettes /admin/etiquette/… aussi. Les pages /admin et /admin/login sont des fichiers
    statiques (voir build.js) : elles ne contiennent aucune donnée.
 
    Les règles sont exactement celles du serveur local : elles vivent dans
@@ -25,6 +25,9 @@
                            (/api/stripe-webhook)
      MONDIAL_RELAY_BRAND, CHRONOPOST_ACCOUNT, CHRONOPOST_PASSWORD
                            recherche des points relais (/api/relais)
+     MONDIAL_RELAY_LOGIN, MONDIAL_RELAY_PASSWORD, COLISSIMO_CONTRACT,
+     COLISSIMO_PASSWORD    bordereaux d'envoi (lib/labels.js)
+     RESEND_API_KEY, CONTACT_TO, CONTACT_FROM  courriels de commande
    ========================================================================== */
 'use strict';
 

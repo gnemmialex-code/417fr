@@ -231,11 +231,15 @@
         ? 'À domicile<br><strong>' + esc(d.recipient || order.customerName) + '</strong><br>'
           + esc(d.address.address) + '<br>' + esc(d.address.zip + ' ' + d.address.city)
         : '';
+    var label = order.label
+      ? '<br><span class="tag tag--ok">Bordereau acheté</span> ' + esc(order.label.carrier) + ' ' + esc(order.label.service)
+        + ' · n° <strong>' + esc(order.label.tracking) + '</strong>' + (order.label.test ? ' <span class="tag tag--warn">test</span>' : '')
+      : '';
     var mail = order.mail
       ? '<br><span class="cell-sub">E-mails : boutique ' + esc(order.mail.shop) + ' · client ' + esc(order.mail.customer) + '</span>'
       : '';
     return '<div class="detail-box" style="margin-top:16px"><h3>Livraison choisie</h3><p>'
-      + '<strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + (where ? '<br>' + where : '') + mail + '</p></div>';
+      + '<strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + (where ? '<br>' + where : '') + label + mail + '</p></div>';
   }
 
   function customerById(id) {
@@ -914,7 +918,8 @@
       + '</div>'
       + '<div class="grid-3">'
       + field('freeShippingThreshold', 'Livraison offerte dès (€)', s.freeShippingThreshold, 'number')
-      + field('shippingCost', 'Frais de livraison (€)', s.shippingCost, 'number')
+      + '<div class="field"><label for="set-parcelWeight">Poids d’un colis par défaut (kg)</label>'
+      + '<input id="set-parcelWeight" name="parcelWeight" type="number" min="0.05" step="0.01" value="' + esc(s.parcelWeight || 0.5) + '"></div>'
       + field('lowStockAlert', 'Seuil d’alerte stock', s.lowStockAlert, 'number')
       + field('vatRate', 'Taux de TVA (%)', s.vatRate, 'number')
       + '</div>'
@@ -1278,6 +1283,55 @@
     });
   }
 
+  /* Un bordereau s'achète pour une commande payée en ligne, pas annulée, qui
+     n'en a pas encore. */
+  function canBuyLabel(order) {
+    return Boolean(order.delivery && order.delivery.method && !order.label
+      && ['Annulée', 'Remboursée'].indexOf(order.status) === -1);
+  }
+
+  function labelForm(id) {
+    var order = state.orders.find(function (o) { return o.id === id; });
+    if (!order) return;
+    var d = order.delivery || {};
+    var units = order.items.reduce(function (sum, i) { return sum + i.quantity; }, 0);
+    var weight = Number(state.settings.parcelWeight) || 0.5;
+    var where = d.relay
+      ? 'Point relais n° ' + esc(d.relay.id) + ' — ' + esc(d.relay.name) + ', ' + esc(d.relay.zip + ' ' + d.relay.city)
+      : d.address ? esc(d.address.address) + ', ' + esc(d.address.zip + ' ' + d.address.city) : '';
+    openModal({
+      title: 'Acheter le bordereau — ' + order.ref,
+      body: '<p style="margin-top:0"><strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + '<br>'
+        + '<span class="cell-sub">' + esc(order.customerName) + ' · ' + where + '</span></p>'
+        + '<div class="field"><label for="l-weight">Poids du colis emballé (kg)</label>'
+        + '<input id="l-weight" type="number" min="0.05" max="30" step="0.01" value="' + weight + '"></div>'
+        + '<p class="cell-sub" style="margin-bottom:0">' + units + ' article' + (units > 1 ? 's' : '') + '. '
+        + 'L’étiquette est créée chez le transporteur et facturée sur le compte de la boutique. '
+        + 'Le numéro de suivi est ajouté à la commande et l’expédition est créée.</p>'
+        + '<p class="form-error" id="l-error" style="color:#98362f;margin-bottom:0"></p>',
+      foot: '<button type="button" class="btn btn--ghost" data-close-modal>Annuler</button>'
+        + '<button type="button" class="btn" id="l-buy">Acheter le bordereau</button>',
+      onOpen: function () {
+        var button = $('#l-buy');
+        button.addEventListener('click', function () {
+          button.disabled = true;
+          button.textContent = 'Création en cours…';
+          $('#l-error').textContent = '';
+          api('orders/label', { id: order.id, weight: Number($('#l-weight').value) }).then(function (result) {
+            if (result.state) { state = result.state; render(); }
+            closeModal();
+            toast('Bordereau créé : ' + result.order.label.tracking);
+            orderDetail(order.id);
+          }).catch(function (err) {
+            button.disabled = false;
+            button.textContent = 'Acheter le bordereau';
+            $('#l-error').textContent = err.message;
+          });
+        });
+      }
+    });
+  }
+
   function orderDetail(id) {
     var order = state.orders.find(function (o) { return o.id === id; });
     if (!order) return;
@@ -1318,10 +1372,13 @@
       body: body,
       wide: true,
       foot: '<button type="button" class="btn btn--danger left" id="order-delete">Supprimer</button>'
+        + (canBuyLabel(order) ? '<button type="button" class="btn" id="order-label">Acheter le bordereau</button>' : '')
         + '<a class="btn btn--ghost" href="/admin/bordereau/' + order.id + '" target="_blank" rel="noopener">Bordereau</a>'
         + '<button type="button" class="btn btn--ghost" id="order-edit">Modifier</button>'
         + '<button type="button" class="btn" id="order-ship">Créer l’expédition</button>',
       onOpen: function () {
+        var buy = $('#order-label');
+        if (buy) buy.addEventListener('click', function () { closeModal(); labelForm(order.id); });
         $('#order-edit').addEventListener('click', function () { closeModal(); orderForm(order.id); });
         $('#order-ship').addEventListener('click', function () { closeModal(); shipmentForm(null, order.id); });
         $('#order-delete').addEventListener('click', function () {
