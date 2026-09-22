@@ -555,12 +555,15 @@ l'étiquette à imprimer, puis le récapitulatif complet de la commande ; sans
 
 | Variable | Rôle |
 | --- | --- |
-| `CHRONOPOST_ACCOUNT`, `CHRONOPOST_PASSWORD` | Compte Chronopost. Vides : étiquettes « SPECIMEN » du compte de test. |
+| `CHRONOPOST_ACCOUNT`, `CHRONOPOST_PASSWORD` | Compte Chronopost. |
 | `MONDIAL_RELAY_LOGIN`, `MONDIAL_RELAY_PASSWORD`, `MONDIAL_RELAY_BRAND` | Accès Connect API de Mondial Relay. `MONDIAL_RELAY_SANDBOX=1` pour le bac à sable. |
 | `COLISSIMO_CONTRACT`, `COLISSIMO_PASSWORD` | Compte Colissimo entreprise. |
 
-Sans identifiants, l'achat répond par un message qui dit lesquels manquent ;
-une erreur du transporteur est affichée telle quelle dans la fenêtre d'achat.
+Tout est facultatif. Le bouton n'apparaît que pour les transporteurs dont les
+identifiants sont renseignés ; pour les autres, la fiche commande renvoie vers
+le site du transporteur, où l'étiquette se fait à la main, et le numéro de
+suivi se saisit avec « Créer l'expédition ». Une erreur du transporteur est
+affichée telle quelle dans la fenêtre d'achat.
 
 ## Icônes
 

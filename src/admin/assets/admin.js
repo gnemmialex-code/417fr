@@ -235,11 +235,17 @@
       ? '<br><span class="tag tag--ok">Bordereau acheté</span> ' + esc(order.label.carrier) + ' ' + esc(order.label.service)
         + ' · n° <strong>' + esc(order.label.tracking) + '</strong>' + (order.label.test ? ' <span class="tag tag--warn">test</span>' : '')
       : '';
+    /* Transporteur traité à la main : lien vers son site pour l'étiquette. */
+    var portal = state.settings.carriers.find(function (c) { return c.name === d.carrier; });
+    var manual = !order.label && !canBuyLabel(order) && ['Annulée', 'Remboursée'].indexOf(order.status) === -1 && portal
+      ? '<br><span class="cell-sub">Étiquette à créer sur <a href="' + esc(portal.portal) + '" target="_blank" rel="noopener">le site ' + esc(d.carrier) + '</a>'
+        + (d.relay ? ', point relais n° ' + esc(d.relay.id) : '') + ', puis saisissez le n° de suivi avec « Créer l’expédition ».</span>'
+      : '';
     var mail = order.mail
       ? '<br><span class="cell-sub">E-mails : boutique ' + esc(order.mail.shop) + ' · client ' + esc(order.mail.customer) + '</span>'
       : '';
     return '<div class="detail-box" style="margin-top:16px"><h3>Livraison choisie</h3><p>'
-      + '<strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + (where ? '<br>' + where : '') + label + mail + '</p></div>';
+      + '<strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + (where ? '<br>' + where : '') + label + manual + mail + '</p></div>';
   }
 
   function customerById(id) {
@@ -1287,7 +1293,8 @@
      n'en a pas encore. */
   function canBuyLabel(order) {
     return Boolean(order.delivery && order.delivery.method && !order.label
-      && ['Annulée', 'Remboursée'].indexOf(order.status) === -1);
+      && ['Annulée', 'Remboursée'].indexOf(order.status) === -1
+      && state.labelCarriers && state.labelCarriers[order.delivery.carrier]);
   }
 
   function labelForm(id) {
