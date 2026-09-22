@@ -130,15 +130,13 @@ data.settings = {
   vatNumber: 'FR00 000 000 000',
   siret: '000 000 000 00000',
   currency: 'EUR',
-  freeShippingThreshold: 100,
+  freeShippingThreshold: 50,
   lowStockAlert: 8,
   vatRate: 20,
   carriers: [
     { name: 'Colissimo', portal: 'https://www.laposte.fr/professionnel/colissimo', tracking: 'https://www.laposte.fr/outils/suivre-vos-envois?code=' },
     { name: 'Chronopost', portal: 'https://www.chronopost.fr/expedier', tracking: 'https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=' },
-    { name: 'Mondial Relay', portal: 'https://www.mondialrelay.fr/envoi-de-colis/', tracking: 'https://www.mondialrelay.fr/suivi-de-colis?numeroExpedition=' },
-    { name: 'DHL Express', portal: 'https://mydhl.express.dhl/fr/fr/home.html', tracking: 'https://www.dhl.com/fr-fr/home/suivi.html?tracking-id=' },
-    { name: 'UPS', portal: 'https://www.ups.com/ship', tracking: 'https://www.ups.com/track?loc=fr_FR&tracknum=' }
+    { name: 'Mondial Relay', portal: 'https://www.mondialrelay.fr/envoi-de-colis/', tracking: 'https://www.mondialrelay.fr/suivi-de-colis?numeroExpedition=' }
   ]
 };
 
@@ -178,7 +176,7 @@ data.orders = orderPlans.map((plan) => {
     customerName: customer.name,
     items: items,
     total: Math.round(total * 100) / 100,
-    shippingCost: total >= 100 ? 0 : 6.9,
+    shippingCost: total >= 50 ? 0 : 6.9,
     status: plan.status,
     payment: 'Payée',
     createdAt: daysAgo(plan.days),

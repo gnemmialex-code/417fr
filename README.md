@@ -230,6 +230,9 @@ lib/             Socle du back-office
   supabase.js      Supabase Auth : configuration, vérification des sessions
   env.js           Lecture de .env.local, sans dépendance
   admin-api.js     Règles métier, statistiques, bordereau de livraison
+  checkout.js      Paiement Stripe Checkout et commandes payées en ligne
+  stripe.js        Client Stripe minimal, vérification des webhooks
+  relais.js        Recherche des points relais Mondial Relay et Chronopost
 src/admin/       Interface du back-office (connexion, tableau de bord)
 data/            Données extraites de la boutique Shopify d'origine
   store.json       Base du back-office : compte, stocks, clients, commandes
@@ -257,7 +260,7 @@ dist/            Site généré (régénéré à chaque build)
 - Bandeau d'annonces rotatif, en-tête transparent sur l'accueil, opaque et
   flouté au défilement, masqué quand on descend, révélé quand on remonte.
 - Panier persistant (`localStorage`) : tiroir latéral, quantités, jauge de
-  livraison offerte à 100 €, confirmation visuelle sur le bouton.
+  livraison offerte à 50 €, confirmation visuelle sur le bouton.
 - Recherche instantanée en tiroir et sur `/search`, raccourci clavier « / ».
 - Barre d'achat fixe sur mobile, apparaissant dès que le bouton principal sort
   de l'écran.
@@ -462,6 +465,63 @@ confirmation reçu dans cette boîte.
 
 En ligne, le back-office n'étant pas déployé, l'adresse de la boutique se
 connecte comme un client et la page explique où ouvrir le back-office.
+
+## Paiement et livraison
+
+Le bouton **Procéder au paiement** du panier mène à `/commande`, où le client
+choisit son mode de livraison, puis, pour un point relais, cherche et choisit
+son point par code postal. Le bouton **Payer** l'envoie sur la page de paiement
+hébergée par **Stripe Checkout**. De retour, `/commande/merci` vide le panier.
+
+| Mode | Transporteur | Prix | Délai après expédition |
+| --- | --- | --- | --- |
+| Point relais ou locker | Mondial Relay | 5 € | 2 à 5 jours |
+| Point relais | Chronopost | 5 € | 2 à 5 jours |
+| À domicile | Colissimo | 6 € | 2 jours |
+| Point relais express | Chronopost | 10 € | 1 jour |
+| À domicile express | Chronopost | 17 € | 1 jour |
+
+Tous les modes sont offerts dès le seuil de livraison gratuite des réglages
+(50 €), ou avec un code « livraison offerte ». Les modes vivent dans
+`settings.shippingMethods` de la base : ce sont eux qui alimentent la page
+`/commande`, le tableau de la page Livraison et retours et le paiement. La
+politique d'expédition (`data/policies/shipping-policy.html`) reprend le même
+tableau en texte fixe, à tenir à jour à la main.
+
+**Ce que fait le serveur** (`lib/checkout.js`) :
+
+1. `/api/checkout` reçoit les références et quantités du panier, le code de
+   réduction, le mode et le point relais. Il recalcule tout depuis la base :
+   prix, stock disponible, réductions, gratuité. Aucun prix venu du navigateur
+   n'est cru. Une réduction devient un bon Stripe à usage unique.
+2. Il ouvre une session Stripe Checkout : articles, un seul tarif de livraison
+   (celui choisi, avec son délai), téléphone demandé, adresse de livraison en
+   France pour un envoi à domicile, adresse de facturation pour un point relais.
+3. `/api/stripe-webhook` reçoit la notification signée de Stripe
+   (`checkout.session.completed`) et crée la commande dans le back-office :
+   client créé ou retrouvé par e-mail, stock décrémenté, code compté, mode et
+   point relais ou adresse sur la commande et le bordereau. Une notification
+   reçue deux fois ne crée qu'une commande. `charge.refunded` passe une commande
+   intégralement remboursée en « Remboursée » et recrédite le stock.
+
+La recherche des points relais (`/api/relais`, `lib/relais.js`) interroge
+Mondial Relay et Chronopost côté serveur ; la ville, exigée par Chronopost, est
+déduite du code postal par `geo.api.gouv.fr`. Les codes postaux 97 et 98
+(outre-mer) sont refusés.
+
+| Variable | Rôle |
+| --- | --- |
+| `STRIPE_SECRET_KEY` | Clé secrète Stripe (`sk_test_…`, puis `sk_live_…`). Sans elle, `/commande` annonce que le paiement n'est pas ouvert. |
+| `STRIPE_WEBHOOK_SECRET` | Secret de signature du webhook (`whsec_…`). Un secret par mode, test et production. |
+| `MONDIAL_RELAY_BRAND` | Code enseigne Mondial Relay. Vide : code de test public. |
+| `CHRONOPOST_ACCOUNT`, `CHRONOPOST_PASSWORD` | Compte des services web Chronopost. Vides : compte de test public. |
+
+Dans le tableau de bord Stripe, le webhook pointe vers
+`https://<domaine>/api/stripe-webhook` avec les événements
+`checkout.session.completed`, `checkout.session.async_payment_succeeded` et
+`charge.refunded`. Le site `.vercel.app` étant protégé par une connexion
+Vercel, Stripe ne peut l'atteindre : le webhook demande un domaine public. En
+local : `stripe listen --forward-to localhost:4170/api/stripe-webhook`.
 
 ## Icônes
 

@@ -17,7 +17,7 @@
   var PARALLAX = 0.08;
 
   var catalog = window.SITE_PRODUCTS || [];
-  var config = window.SITE_CONFIG || { freeShippingThreshold: 100 };
+  var config = window.SITE_CONFIG || { freeShippingThreshold: 50 };
   var discounts = window.SITE_DISCOUNTS || [];
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -728,10 +728,18 @@
     return best;
   }
 
+  /* Livraison offerte : par une réduction retenue, ou, sans règle utilisable,
+     par le seuil des réglages. lib/checkout.js applique la même règle. */
+  function shippingIsFree(subtotal, kept) {
+    var rule = usableShippingRule();
+    return kept.some(function (d) { return d.shipping; })
+      || (!rule && subtotal >= (config.freeShippingThreshold || 0));
+  }
+
   function shippingThreshold() {
     var rule = usableShippingRule();
     if (rule) return Number(rule.min) || 0;
-    return config.freeShippingThreshold || 100;
+    return config.freeShippingThreshold || 50;
   }
 
   function applyCode(raw) {
@@ -800,6 +808,7 @@
   }
 
   function renderCart(attempted) {
+    if (checkoutRender) checkoutRender();
     var count = cartCount();
     $$('[data-cart-count]').forEach(function (el) {
       el.textContent = String(count);
@@ -858,15 +867,11 @@
       var threshold = shippingThreshold();
       var remaining = Math.max(0, threshold - subtotal);
 
-      /* Sans règle utilisable, on retombe sur le seuil des réglages : la
-         boutique se comporte comme avant que les codes existent. */
-      var rule = usableShippingRule();
-      var freeShipping = kept.some(function (d) { return d.shipping; })
-        || (!rule && subtotal >= (config.freeShippingThreshold || 0));
+      var freeShipping = shippingIsFree(subtotal, kept);
 
-      var shippingCost = Number(config.shippingCost) || 0;
-      var shippingDue = freeShipping ? 0 : shippingCost;
-      var total = Math.round((goods + shippingDue) * 100) / 100;
+      /* Le prix de la livraison dépend du transporteur choisi à l'étape
+         suivante : le total du panier ne l'inclut donc pas. */
+      var total = goods;
 
       $('[data-cart-total]', foot).textContent = money(total);
       $('[data-cart-progress] i', foot).style.width =
@@ -892,7 +897,12 @@
            « livraison offerte » lisible dans le prix final. */
         rows += '<div class="cart-sum' + (freeShipping ? ' cart-sum--off' : '') + '">'
           + '<span>' + escapeHtml(tr('Livraison')) + '</span><span>'
-          + (freeShipping ? escapeHtml(tr('Offerte')) : money(shippingCost)) + '</span></div>';
+          + (freeShipping
+            ? escapeHtml(tr('Offerte'))
+            : config.shippingFrom != null
+              ? escapeHtml(tr('Dès')) + ' ' + money(config.shippingFrom)
+              : escapeHtml(tr('Selon le mode choisi')))
+          + '</span></div>';
 
         sums.innerHTML = rows;
       }
@@ -950,6 +960,283 @@
     var remove = event.target.closest('[data-cart-remove]');
     if (remove) setQuantity(remove.getAttribute('data-cart-remove'), 0);
   });
+
+  /* ---------- Commande : livraison puis paiement ---------- */
+
+  var CHECKOUT_KEY = '417france.checkout';
+  /* Posé par initCheckout : la page de commande suit le panier et le code. */
+  var checkoutRender = null;
+
+  function checkoutNote(el, message, isError) {
+    if (!el) return;
+    el.textContent = message || '';
+    el.classList.toggle('is-error', Boolean(isError));
+  }
+
+  function distanceLabel(km) {
+    if (km == null || !isFinite(km)) return '';
+    return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1).replace('.', ',') + ' km';
+  }
+
+  function relayItem(point, index, checked) {
+    var hours = (point.hours || []).map(function (h) {
+      return '<dt>' + escapeHtml(tr(h.day)) + '</dt><dd>' + escapeHtml(h.slots.join(', ')) + '</dd>';
+    }).join('');
+    var map = point.lat != null && point.lng != null
+      ? '<a class="relay__map" href="https://www.google.com/maps/search/?api=1&amp;query=' + point.lat + ',' + point.lng
+        + '" target="_blank" rel="noopener">' + escapeHtml(tr('Voir sur la carte')) + '</a>'
+      : '';
+    var distance = distanceLabel(point.distance);
+    return '<li><label class="relay">'
+      + '<input type="radio" name="relay" value="' + index + '"' + (checked ? ' checked' : '') + '>'
+      + '<span><span class="relay__name"><strong>' + escapeHtml(point.name) + '</strong>'
+      + (point.locker ? '<span class="relay__tag">Locker</span>' : '') + '</span><br>'
+      + '<span class="relay__address">' + escapeHtml(point.address) + ', ' + escapeHtml(point.zip + ' ' + point.city)
+      + (distance ? ' · ' + distance : '') + '</span>'
+      + (hours ? '<details class="relay__more"><summary>' + escapeHtml(tr('Horaires')) + '</summary><dl class="relay__hours">' + hours + '</dl></details>' : '')
+      + map
+      + '</span></label></li>';
+  }
+
+  function initCheckout() {
+    var root = $('[data-checkout]');
+    if (!root) return;
+
+    var main = $('[data-checkout-main]', root);
+    var empty = $('[data-checkout-empty]', root);
+    var relayBox = $('[data-relay]', root);
+    var relayForm = $('[data-relay-search]', root);
+    var relayList = $('[data-relay-list]', root);
+    var relayNote = $('[data-relay-note]', root);
+    var payButton = $('[data-checkout-pay]', root);
+    var payNote = $('[data-checkout-note]', root);
+
+    var saved = readJson(CHECKOUT_KEY, {}) || {};
+    var points = [];
+    var searchedFor = '';
+    /* Un point relais retenu par transporteur, pour qu'un aller-retour entre
+       deux modes ne le perde pas : { carrier, id, name, address, zip, city }. */
+    var relays = saved.relays && typeof saved.relays === 'object' ? saved.relays : {};
+    var chosenRelay = null;
+
+    if (saved.method) {
+      $$('input[name="method"]', root).forEach(function (input) {
+        if (input.value === saved.method) input.checked = true;
+      });
+    }
+    if (saved.cp) relayForm.elements.cp.value = saved.cp;
+    if (saved.ville) relayForm.elements.ville.value = saved.ville;
+
+    function method() {
+      return $('input[name="method"]:checked', root);
+    }
+
+    function isRelay(m) {
+      return Boolean(m && m.getAttribute('data-type') === 'relay');
+    }
+
+    function remember() {
+      var m = method();
+      writeJson(CHECKOUT_KEY, {
+        method: m ? m.value : '',
+        relays: relays,
+        cp: relayForm.elements.cp.value.trim(),
+        ville: relayForm.elements.ville.value.trim()
+      });
+    }
+
+    function renderPoints() {
+      relayList.innerHTML = points.map(function (point, i) {
+        return relayItem(point, i, Boolean(chosenRelay && chosenRelay.id === point.id));
+      }).join('');
+    }
+
+    function render() {
+      if (!cart.length) {
+        main.hidden = true;
+        empty.hidden = false;
+        return;
+      }
+      main.hidden = false;
+      empty.hidden = true;
+
+      var subtotal = cartTotal();
+      var kept = chosenDiscounts();
+      var off = kept.reduce(function (sum, d) { return sum + d.amount; }, 0);
+      var goods = Math.max(0, Math.round((subtotal - off) * 100) / 100);
+      var free = shippingIsFree(subtotal, kept);
+      var m = method();
+      var shipping = m && !free ? Number(m.getAttribute('data-price')) || 0 : 0;
+
+      $$('[data-ship-price]', root).forEach(function (price) {
+        var input = $('input', price.closest('.ship-option'));
+        price.classList.toggle('is-free', free);
+        price.textContent = free ? tr('Offerte') : money(Number(input.getAttribute('data-price')) || 0);
+      });
+
+      $('[data-checkout-lines]', root).innerHTML = cart.map(function (line) {
+        var product = productByHandle(line.handle);
+        if (!product) return '';
+        return '<li class="checkout__line"><img src="' + product.image + '" alt="" loading="lazy">'
+          + '<span>' + escapeHtml(product.title) + '<small>' + line.quantity + ' × ' + money(product.price) + '</small></span>'
+          + '<span>' + money(product.price * line.quantity) + '</span></li>';
+      }).join('');
+
+      var rows = '<div class="cart-sum"><span>' + escapeHtml(tr('Sous-total')) + '</span><span>' + money(subtotal) + '</span></div>';
+      kept.forEach(function (d) {
+        if (d.shipping) return;
+        rows += '<div class="cart-sum cart-sum--off"><span>' + escapeHtml(d.label) + '</span><span>&minus;' + money(d.amount) + '</span></div>';
+      });
+      rows += '<div class="cart-sum' + (free ? ' cart-sum--off' : '') + '"><span>' + escapeHtml(tr('Livraison')) + '</span><span>'
+        + (free ? escapeHtml(tr('Offerte')) : money(shipping)) + '</span></div>';
+      $('[data-checkout-sums]', root).innerHTML = rows;
+
+      var total = Math.round((goods + shipping) * 100) / 100;
+      $('[data-checkout-total]', root).textContent = money(total);
+
+      /* Le point relais n'a de sens que pour son transporteur : Chronopost
+         relais et Chronopost relais express partagent le même réseau. */
+      var relay = isRelay(m);
+      var carrier = relay ? m.getAttribute('data-carrier') : '';
+      relayBox.hidden = !relay;
+      if (relay && searchedFor !== carrier) {
+        chosenRelay = relays[carrier] && relays[carrier].id ? relays[carrier] : null;
+        points = chosenRelay ? [chosenRelay] : [];
+        searchedFor = carrier;
+        renderPoints();
+        checkoutNote(relayNote, chosenRelay ? tr('Point relais choisi. Vous pouvez en chercher un autre.') : '');
+        if (!chosenRelay && /^\d{5}$/.test(relayForm.elements.cp.value.trim())) search();
+      }
+
+      payButton.textContent = tr('Payer') + ' ' + money(total);
+      payButton.disabled = relay && !chosenRelay;
+      localized($('.checkout__summary', root));
+    }
+
+    function search() {
+      var cp = relayForm.elements.cp.value.trim();
+      var ville = relayForm.elements.ville.value.trim();
+      var m = method();
+      if (!isRelay(m)) return;
+      if (!/^\d{5}$/.test(cp)) {
+        checkoutNote(relayNote, tr('Indiquez un code postal à 5 chiffres.'), true);
+        relayForm.elements.cp.focus();
+        return;
+      }
+      var carrier = m.getAttribute('data-carrier');
+      searchedFor = carrier;
+      remember();
+      checkoutNote(relayNote, tr('Recherche des points relais…'));
+      relayList.setAttribute('aria-busy', 'true');
+      fetch('/api/relais?transporteur=' + encodeURIComponent(carrier) + '&cp=' + cp + '&ville=' + encodeURIComponent(ville), {
+        headers: { Accept: 'application/json' }
+      }).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          if (!response.ok) throw new Error(data.error || tr('La recherche de points relais ne répond pas. Réessayez dans un instant.'));
+          return data;
+        });
+      }).then(function (data) {
+        if (searchedFor !== carrier) return;
+        points = data.points || [];
+        if (chosenRelay && !points.some(function (p) { return p.id === chosenRelay.id; })) {
+          chosenRelay = null;
+          delete relays[carrier];
+          remember();
+        }
+        renderPoints();
+        checkoutNote(relayNote, points.length
+          ? tr('Choisissez votre point relais :')
+          : tr('Aucun point relais trouvé autour de ce code postal. Essayez une commune voisine.'), !points.length);
+        render();
+      }).catch(function (err) {
+        checkoutNote(relayNote, err.message, true);
+      }).then(function () {
+        relayList.removeAttribute('aria-busy');
+      });
+    }
+
+    root.addEventListener('change', function (event) {
+      if (event.target.name === 'method') {
+        checkoutNote(payNote, '');
+        remember();
+        render();
+      } else if (event.target.name === 'relay') {
+        var point = points[Number(event.target.value)];
+        if (!point) return;
+        chosenRelay = {
+          carrier: searchedFor, id: point.id, name: point.name,
+          address: point.address, zip: point.zip, city: point.city,
+          lat: point.lat, lng: point.lng, locker: point.locker, hours: point.hours
+        };
+        relays[searchedFor] = chosenRelay;
+        checkoutNote(payNote, '');
+        remember();
+        render();
+      }
+    });
+
+    relayForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      search();
+    });
+
+    payButton.addEventListener('click', function () {
+      var m = method();
+      if (!m) return;
+      var relay = isRelay(m);
+      if (relay && !chosenRelay) {
+        checkoutNote(payNote, tr('Choisissez un point relais.'), true);
+        return;
+      }
+      payButton.disabled = true;
+      checkoutNote(payNote, tr('Ouverture de la page de paiement…'));
+      fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+        body: JSON.stringify({
+          items: cart.map(function (line) { return { handle: line.handle, quantity: line.quantity }; }),
+          code: appliedCode,
+          method: m.value,
+          relay: relay ? {
+            id: chosenRelay.id, name: chosenRelay.name, address: chosenRelay.address,
+            zip: chosenRelay.zip, city: chosenRelay.city
+          } : null
+        })
+      }).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          if (!response.ok || !data.url) throw new Error(data.error || tr('Le paiement n’a pas pu être ouvert. Réessayez dans un instant.'));
+          window.location.href = data.url;
+        });
+      }).catch(function (err) {
+        payButton.disabled = false;
+        checkoutNote(payNote, err.message, true);
+      });
+    });
+
+    /* Retour arrière depuis Stripe : la page revient du cache, bouton figé. */
+    window.addEventListener('pageshow', function (event) {
+      if (!event.persisted) return;
+      checkoutNote(payNote, '');
+      render();
+    });
+
+    checkoutRender = render;
+    render();
+  }
+
+  /* Retour de Stripe après paiement : le panier est soldé. */
+  function initCheckoutDone() {
+    if (!$('[data-checkout-done]')) return;
+    if (!/[?&]session_id=/.test(window.location.search)) return;
+    cart = [];
+    writeJson(CART_KEY, cart);
+    appliedCode = '';
+    writeJson(CODE_KEY, '');
+    try {
+      var saved = readJson(CHECKOUT_KEY, {}) || {};
+      writeJson(CHECKOUT_KEY, { method: saved.method, relays: saved.relays, cp: saved.cp, ville: saved.ville });
+    } catch (err) { /* sans stockage, rien à solder */ }
+  }
 
   /* ---------- Notification ---------- */
 
@@ -1992,5 +2279,7 @@
   initAccount();
   initToTop();
   initCartCode();
+  initCheckoutDone();
+  initCheckout();
   renderCart();
 })();

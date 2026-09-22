@@ -1,8 +1,9 @@
 /* =============================================================================
    Fonction Vercel : le back-office sur le site en ligne.
 
-   vercel.json redirige ici les routes /api/* du back-office (sauf
-   /api/contact, qui a sa propre fonction) et les bordereaux
+   vercel.json redirige ici les routes /api/* du back-office et de la
+   boutique (paiement, points relais, webhook Stripe), sauf /api/contact, qui
+   a sa propre fonction, et les bordereaux
    /admin/bordereau/…, générés à la volée. Le chemin d'origine arrive dans le
    paramètre « route ». Les pages /admin et /admin/login sont des fichiers
    statiques (voir build.js) : elles ne contiennent aucune donnée.
@@ -19,6 +20,11 @@
                            client (défaut : contact@417france.com)
      VERCEL_DEPLOY_HOOK_URL  facultatif : republie le site après une
                            modification du catalogue ou des contenus
+     STRIPE_SECRET_KEY     paiement de la boutique (/api/checkout)
+     STRIPE_WEBHOOK_SECRET signature des notifications Stripe
+                           (/api/stripe-webhook)
+     MONDIAL_RELAY_BRAND, CHRONOPOST_ACCOUNT, CHRONOPOST_PASSWORD
+                           recherche des points relais (/api/relais)
    ========================================================================== */
 'use strict';
 

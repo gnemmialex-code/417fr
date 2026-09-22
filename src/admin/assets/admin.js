@@ -215,8 +215,24 @@
     return '<span class="tag ' + (map[status] || 'tag--neutral') + '">' + esc(status) + '</span>';
   }
 
+  /* Montant payé : articles, moins la réduction, plus la livraison. */
   function orderTotal(order) {
-    return order.total + (order.shippingCost || 0);
+    return order.total - (order.discount || 0) + (order.shippingCost || 0);
+  }
+
+  /* Mode de livraison choisi en ligne, avec le point relais ou l'adresse. */
+  function deliveryBox(order) {
+    var d = order.delivery;
+    if (!d) return '';
+    var where = d.relay
+      ? 'Point relais n° ' + esc(d.relay.id) + '<br><strong>' + esc(d.relay.name) + '</strong><br>'
+        + esc(d.relay.address) + '<br>' + esc(d.relay.zip + ' ' + d.relay.city)
+      : d.address
+        ? 'À domicile<br><strong>' + esc(d.recipient || order.customerName) + '</strong><br>'
+          + esc(d.address.address) + '<br>' + esc(d.address.zip + ' ' + d.address.city)
+        : '';
+    return '<div class="detail-box" style="margin-top:16px"><h3>Livraison choisie</h3><p>'
+      + '<strong>' + esc(d.carrier) + '</strong> — ' + esc(d.label) + (where ? '<br>' + where : '') + '</p></div>';
   }
 
   function customerById(id) {
@@ -1285,9 +1301,11 @@
       + '<table class="table"><thead><tr><th>Référence</th><th>Produit</th><th class="num">Qté</th>'
       + '<th class="num">P.U.</th><th class="num">Total</th></tr></thead><tbody>' + rows + '</tbody></table>'
       + '<p style="text-align:right;margin-top:14px;font-size:15px">'
-      + 'Sous-total ' + money(order.total) + ' · Livraison '
+      + 'Sous-total ' + money(order.total)
+      + (order.discount ? ' · Réduction −' + money(order.discount) : '') + ' · Livraison '
       + (order.shippingCost ? money(order.shippingCost) : 'offerte')
       + ' · <strong>Total ' + money(orderTotal(order)) + '</strong></p>'
+      + deliveryBox(order)
       + (shipment ? '<div class="detail-box" style="margin-top:16px"><h3>Expédition</h3><p>'
         + esc(shipment.carrier) + ' · ' + esc(shipment.tracking || 'sans numéro') + ' · ' + esc(shipment.status) + '</p></div>' : '')
       + (order.note ? '<div class="detail-box" style="margin-top:16px"><h3>Note</h3><p>' + esc(order.note) + '</p></div>' : '');
@@ -1322,8 +1340,12 @@
         + esc(o.ref) + ' — ' + esc(o.customerName) + '</option>';
     }).join('');
 
+    /* Nouvelle expédition d'une commande en ligne : le transporteur choisi
+       par le client est proposé d'office. */
+    var forOrder = state.orders.find(function (o) { return o.id === selectedOrder; });
+    var carrier = shipment ? shipment.carrier : (forOrder && forOrder.delivery ? forOrder.delivery.carrier : '');
     var carrierOptions = state.settings.carriers.map(function (c) {
-      return '<option value="' + esc(c.name) + '"' + (shipment && shipment.carrier === c.name ? ' selected' : '') + '>'
+      return '<option value="' + esc(c.name) + '"' + (carrier === c.name ? ' selected' : '') + '>'
         + esc(c.name) + '</option>';
     }).join('');
 

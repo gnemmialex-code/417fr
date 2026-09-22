@@ -160,15 +160,15 @@ const VIDEO_SOURCES = [
 ];
 
 /* Un choix de reductions prêtes à l'emploi. Seule la livraison offerte dès
-   100 € est active : les autres attendent d'être basculées depuis la
+   50 € est active : les autres attendent d'être basculées depuis la
    rubrique « Réductions » du back-office. */
 const DISCOUNT_SEEDS = [
   {
-    "code": "LIVRAISON100",
-    "label": "Livraison offerte dès 100 € d’achat",
+    "code": "LIVRAISON50",
+    "label": "Livraison offerte dès 50 € d’achat",
     "type": "shipping",
     "value": 0,
-    "minSubtotal": 100,
+    "minSubtotal": 50,
     "scope": "",
     "auto": true,
     "active": true
@@ -233,6 +233,17 @@ const DISCOUNT_SEEDS = [
     "auto": false,
     "active": false
   }
+];
+
+/* Les modes de livraison proposés au client, prix TTC tout compris. Tous sont
+   offerts dès le seuil de livraison gratuite. minDays et maxDays comptent les
+   jours ouvrés après l'expédition. */
+const SHIPPING_METHODS = [
+  { id: 'mondial-relay', carrier: 'Mondial Relay', label: 'Point relais ou locker', type: 'relay', price: 5, minDays: 2, maxDays: 5 },
+  { id: 'chronopost-relais', carrier: 'Chronopost', label: 'Point relais', type: 'relay', price: 5, minDays: 2, maxDays: 5 },
+  { id: 'colissimo-domicile', carrier: 'Colissimo', label: 'À domicile', type: 'home', price: 6, minDays: 2, maxDays: 2 },
+  { id: 'chronopost-relais-express', carrier: 'Chronopost', label: 'Point relais express', type: 'relay', price: 10, minDays: 1, maxDays: 1 },
+  { id: 'chronopost-domicile-express', carrier: 'Chronopost', label: 'À domicile express', type: 'home', price: 17, minDays: 1, maxDays: 1 }
 ];
 
 function seededDiscounts() {
@@ -418,6 +429,11 @@ const result = store.update((data) => {
      seule fois : un code supprimé dans le back-office ne revient pas. */
   if (!data.discounts) data.discounts = [];
   if (!data.discounts.length) data.discounts = seededDiscounts();
+
+  /* Les modes de livraison, posés une fois : ensuite, c'est la base qui fait foi. */
+  if (!Array.isArray(data.settings.shippingMethods)) {
+    data.settings.shippingMethods = SHIPPING_METHODS.map((m) => Object.assign({}, m));
+  }
 
   store.log(data, 'Contenu du site importé', enriched + ' produits enrichis');
   return { enriched };

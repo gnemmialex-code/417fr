@@ -47,6 +47,19 @@ if (!store || !store.content) {
 const site = Object.assign({}, fallback, store.content);
 const settings = store.settings || {};
 
+/* Modes de livraison proposés au paiement, prix TTC tout compris. */
+const shippingMethods = Array.isArray(settings.shippingMethods) ? settings.shippingMethods : [];
+const shippingFrom = shippingMethods.length
+  ? Math.min.apply(null, shippingMethods.map((m) => Number(m.price) || 0))
+  : null;
+
+function deliveryDelay(method) {
+  const min = Number(method.minDays) || 0;
+  const max = Number(method.maxDays) || min;
+  if (max <= 1) return '1 jour';
+  return min === max ? `${max} jours` : `${min} à ${max} jours`;
+}
+
 const collectionMembers = {
   'tout-nos-produits': readJson('collection-tout-nos-produits.json').products.map((p) => p.handle),
   'produits-pour-le-visage': readJson('collection-produits-pour-le-visage.json').products.map((p) => p.handle),
@@ -169,7 +182,7 @@ const SCHEMA_AVAILABILITY = {
 
 /* Phrase affichee sous le prix, sur la fiche produit. */
 const STOCK_NOTES = {
-  'in-stock': 'En stock, expédié sous 24 h',
+  'in-stock': 'En stock, expédié le jour même ou le lendemain',
   'incoming': 'En arrivage, réapprovisionnement en cours',
   'out-of-stock': 'Épuisé, bientôt de retour'
 };
@@ -513,8 +526,8 @@ function drawers() {
     <p class="cart-note" data-cart-code-note></p>
     <div class="cart-sums" data-cart-sums></div>
     <div class="cart-total"><span>Total</span><strong data-cart-total>€0,00</strong></div>
-    <button type="button" class="btn btn--block">Procéder au paiement</button>
-    <p class="cart-note">Taxes incluses. Frais d’expédition calculés à l’étape suivante.</p>
+    <a class="btn btn--block" href="/commande">Procéder au paiement</a>
+    <p class="cart-note">Prix tout compris, taxes incluses. Livraison en France uniquement, à domicile ou en point relais : son prix s’affiche à l’étape suivante.</p>
   </div>
 </aside>
 
@@ -693,7 +706,8 @@ ${footer()}
 ${drawers()}
 <script>window.SITE_PRODUCTS = ${catalogJson};window.SITE_CONFIG = ${JSON.stringify({
   freeShippingThreshold: settings.freeShippingThreshold || site.freeShippingThreshold,
-  shippingCost: settings.shippingCost === undefined ? 5.9 : Number(settings.shippingCost)
+  shippingFrom: shippingFrom,
+  shippingMethods: shippingMethods.map((m) => ({ id: m.id, type: m.type, carrier: m.carrier, label: m.label, price: Number(m.price) || 0 }))
 })};window.SITE_FORMS = ${JSON.stringify({
   endpoint: (site.forms && site.forms.endpoint) || '',
   email: settings.email || ''
@@ -1372,6 +1386,24 @@ function storyPage() {
   });
 }
 
+/* Tableau des modes de livraison, affiché sur la page Livraison et retours. */
+function shippingTable() {
+  if (!shippingMethods.length) return '';
+  const threshold = settings.freeShippingThreshold || site.freeShippingThreshold;
+  const rows = shippingMethods.map((m) => `<tr><td>${escapeHtml(m.carrier)}</td><td>${escapeHtml(m.label)}</td><td>${deliveryDelay(m)}</td><td>${money(m.price)}</td></tr>`)
+    .join('\n        ');
+  return `<div class="rte shipping-modes"${reveal(0, 'fade')}>
+    <h2>Modes de livraison</h2>
+    <table>
+      <thead><tr><th>Transporteur</th><th>Livraison</th><th>Délai</th><th>Prix</th></tr></thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+    <p>Livraison en France métropolitaine uniquement. Prix tout compris, taxes incluses. Tous les modes sont offerts dès ${threshold} € d’achat. Délais comptés à partir de l’expédition, qui a lieu le jour même ou le lendemain de la commande (le lundi pour une commande du week-end).</p>
+  </div>`;
+}
+
 function faqPage() {
   const items = site.faq.map((item, i) => `<details${i === 0 ? ' open' : ''}>
       <summary>${escapeHtml(item.q)}</summary>
@@ -1392,6 +1424,7 @@ function faqPage() {
   <div class="acc faq"${reveal(0, 'fade')}>
     ${items}
   </div>
+  ${shippingTable()}
   <h2 class="visually-hidden">Nos garanties</h2>
   <div class="contact-cards" style="grid-template-columns:repeat(4,1fr)">
       ${reassure}
@@ -1416,6 +1449,86 @@ function faqPage() {
     description: 'Délais, frais de port, retours et paiement : toutes les réponses.',
     body: body + '\n' + schema,
     currentPath: '/pages/livraison-et-retours', canonical: '/pages/livraison-et-retours'
+  });
+}
+
+/* Étape de livraison, avant la page de paiement de Stripe. Le panier vit dans
+   le navigateur : le récapitulatif et les options sont remplis par app.js.
+   Seuls les modes de livraison sont posés ici. */
+function checkoutPage() {
+  const options = shippingMethods.map((m, i) => `<label class="ship-option">
+        <input type="radio" name="method" value="${escapeHtml(m.id)}" data-type="${m.type === 'relay' ? 'relay' : 'home'}" data-carrier="${escapeHtml(m.carrier)}" data-price="${Number(m.price) || 0}"${i === 0 ? ' checked' : ''}>
+        <span class="ship-option__body">
+          <span class="ship-option__name"><strong>${escapeHtml(m.carrier)}</strong> ${escapeHtml(m.label)}</span>
+          <span class="ship-option__delay">${deliveryDelay(m)} après l’expédition</span>
+        </span>
+        <span class="ship-option__price" data-ship-price>${money(m.price)}</span>
+      </label>`).join('\n      ');
+
+  const body = `${breadcrumb([{ label: 'Accueil', url: '/' }, { label: 'Commande' }])}
+<section class="container page-head">
+  <h1>Livraison</h1>
+  <p>Choisissez votre mode de livraison, puis réglez en toute sécurité sur la page de paiement.</p>
+</section>
+<section class="container checkout" data-checkout>
+  <p class="checkout__empty" data-checkout-empty hidden>Votre panier est vide. <a href="/collections/tout-nos-produits">Découvrir nos soins</a></p>
+  <div class="checkout__grid" data-checkout-main hidden>
+    <div class="checkout__steps">
+      <fieldset class="checkout__step">
+        <legend>Mode de livraison</legend>
+        <p class="checkout__hint">Livraison en France métropolitaine uniquement. Expédition le jour même ou le lendemain, le lundi pour une commande du week-end.</p>
+        <div class="ship-options" data-ship-options>
+      ${options}
+        </div>
+      </fieldset>
+
+      <fieldset class="checkout__step" data-relay hidden>
+        <legend>Point relais</legend>
+        <form class="relay-search" data-relay-search novalidate>
+          <div class="field"><label for="relay-cp">Code postal</label><input id="relay-cp" name="cp" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required></div>
+          <div class="field"><label for="relay-city">Ville <span class="checkout__optional">(facultatif)</span></label><input id="relay-city" name="ville" type="text" autocomplete="address-level2" maxlength="60"></div>
+          <button type="submit" class="btn btn--outline">Rechercher</button>
+        </form>
+        <p class="checkout__note" data-relay-note role="status"></p>
+        <ul class="relay-list" data-relay-list></ul>
+      </fieldset>
+    </div>
+
+    <aside class="checkout__summary" aria-label="Récapitulatif">
+      <h2>Récapitulatif</h2>
+      <ul class="checkout__lines" data-checkout-lines></ul>
+      <div class="cart-sums" data-checkout-sums></div>
+      <div class="cart-total"><span>Total</span><strong data-checkout-total></strong></div>
+      <button type="button" class="btn btn--block" data-checkout-pay>Payer</button>
+      <p class="checkout__note" data-checkout-note role="alert"></p>
+      <p class="cart-note">Paiement sécurisé par Stripe : carte bancaire, Apple Pay, Google Pay. Vos coordonnées sont demandées à l’étape suivante. Prix tout compris, taxes incluses.</p>
+    </aside>
+  </div>
+</section>`;
+
+  return layout({
+    title: `Livraison et paiement – ${site.name}`,
+    description: 'Choisissez votre mode de livraison et réglez votre commande.',
+    body, currentPath: '/commande', canonical: '/commande',
+    robots: 'noindex, nofollow'
+  });
+}
+
+/* Retour de Stripe après un paiement réussi. La commande est enregistrée par
+   la notification de Stripe, pas par cette page : elle vide le panier et
+   remercie, rien de plus. */
+function thankYouPage() {
+  const body = `<section class="container page-head checkout-done" data-checkout-done>
+  <h1>Merci pour votre commande</h1>
+  <p>Votre paiement est confirmé. Vous allez recevoir un reçu par e-mail. Votre colis part le jour même ou le lendemain (le lundi pour une commande du week-end), et nous vous envoyons son numéro de suivi dès l’expédition.</p>
+  <p style="margin-top:30px"><a class="btn" href="/">Retour à la boutique</a></p>
+</section>`;
+
+  return layout({
+    title: `Commande confirmée – ${site.name}`,
+    description: 'Votre commande est confirmée.',
+    body, currentPath: '/commande/merci', canonical: '/commande/merci',
+    robots: 'noindex, nofollow'
   });
 }
 
@@ -1655,6 +1768,8 @@ function build() {
   /* Hors du plan de site : une page de connexion n'a rien à faire dans les
      résultats de recherche. */
   write(path.join('pages', 'compte', 'index.html'), accountPage());
+  write(path.join('commande', 'index.html'), checkoutPage());
+  write(path.join('commande', 'merci', 'index.html'), thankYouPage());
   write(path.join('pages', 'store-locator', 'index.html'), storeLocatorPage());
   urls.push('/pages/store-locator');
 
@@ -1694,7 +1809,7 @@ function build() {
   }, null, 2));
 
   write('sitemap.xml', buildSitemap(urls));
-  write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /preview\nDisallow: /admin\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+  write('robots.txt', `User-agent: *\nAllow: /\nDisallow: /preview\nDisallow: /admin\nDisallow: /commande\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 
   copyDir(path.join(SRC, 'assets'), path.join(DIST, 'assets'));
   copyDir(path.join(SRC, 'media'), path.join(DIST, 'media'));

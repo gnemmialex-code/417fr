@@ -8,7 +8,7 @@
   "logoLight": "https://417france.com/cdn/shop/files/logo_Fr_blanc_petit.png",
   "logoMark": "https://417france.com/cdn/shop/files/logo_blanc_4e4e692e-d8a0-4022-8a88-7fbf3bb8d3a0.png",
   "socialImage": "https://417france.com/cdn/shop/files/logo_Fr.jpg",
-  "freeShippingThreshold": 100,
+  "freeShippingThreshold": 50,
   "menu": [
     {
       "label": "Visage",
@@ -169,7 +169,7 @@
     "La beauté libérée"
   ],
   "announcements": [
-    "Profitez de nos offres découvertes dès maintenant — Livraison offerte à partir de 100 € d’achat"
+    "Profitez de nos offres découvertes dès maintenant — Livraison offerte à partir de 50 € d’achat"
   ],
   "brandBlock": {
     "number": "417",
@@ -180,7 +180,7 @@
     {
       "icon": "https://cdn.shopify.com/s/files/1/0726/1221/7115/files/ecom-no-replace-oeymwW5fH4ic-sh-1.png",
       "title": "Livraison",
-      "text": "Livraison offerte à partir de 100 € d’achat"
+      "text": "Livraison offerte à partir de 50 € d’achat"
     },
     {
       "icon": "https://cdn.shopify.com/s/files/1/0726/1221/7115/files/ecom-no-replace-L4i0479FGvic-sh-2.png",
@@ -374,7 +374,7 @@
     {
       "value": "14 j",
       "label": "Pour changer d’avis",
-      "text": "Retour accepté sous quatorze jours, livraison offerte dès 100 € d’achat."
+      "text": "Retour accepté sous quatorze jours, livraison offerte dès 50 € d’achat."
     }
   ],
   "storyTeaser": {
@@ -414,11 +414,15 @@
   "faq": [
     {
       "q": "Quels sont les délais de livraison ?",
-      "a": "Les commandes passées avant 14 h sont expédiées le jour même. Comptez deux à trois jours ouvrés en France métropolitaine, quatre à six jours pour la Belgique, le Luxembourg et la Suisse."
+      "a": "Votre commande est expédiée le jour même ou le lendemain ; celles du samedi et du dimanche partent le lundi. Nous livrons uniquement en France : un jour en Chronopost express, deux jours en Colissimo, deux à cinq jours en point relais, sept jours au plus."
     },
     {
       "q": "La livraison est-elle offerte ?",
-      "a": "Oui, dès 100 € d’achat. En dessous, la participation aux frais d’expédition est de 6,90 € en point relais comme à domicile."
+      "a": "Oui, dès 50 € d’achat, quel que soit le mode de livraison, express compris. En dessous, elle coûte de 5 € à 17 € selon le mode choisi, prix tout compris."
+    },
+    {
+      "q": "Quels modes de livraison proposez-vous ?",
+      "a": "Vous choisissez au moment du paiement, prix tout compris : Mondial Relay en point relais ou locker (5 €), Chronopost en point relais (5 €), Colissimo à domicile en 2 jours (6 €), Chronopost express en 1 jour, en point relais (10 €) ou à domicile (17 €). Dès 50 € d’achat, tous les modes sont offerts."
     },
     {
       "q": "Puis-je retourner un produit ?",
@@ -440,11 +444,11 @@
   "reassurance": [
     {
       "title": "Livraison offerte",
-      "text": "Dès 100 € d’achat, en France et en Belgique."
+      "text": "Dès 50 € d’achat, express compris, partout en France."
     },
     {
-      "title": "Expédition sous 24 h",
-      "text": "Commande avant 14 h, préparée le jour même."
+      "title": "Expédiée sous 24 h",
+      "text": "Le jour même ou le lendemain ; le lundi pour une commande du week-end."
     },
     {
       "title": "Retour sous 14 jours",
