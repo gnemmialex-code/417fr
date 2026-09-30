@@ -56,7 +56,7 @@ const TITLE_FIXES = {
   'Lotion Visage Hydratante & Equilibrante': 'Lotion Visage Hydratante & Équilibrante',
   'Crème hydratante pour les mains – Kiwi & Mango': 'Crème Hydratante pour les Mains – Kiwi & Mangue',
   'Crème hydratante pour les mains – Milk & Honey': 'Crème Hydratante pour les Mains – Lait & Miel',
-  'Crème hydratante pour les mains – Ocean': 'Crème Hydratante pour les Mains – Ocean',
+  'Crème hydratante pour les mains – Ocean': 'Crème Hydratante pour les Mains – Océan',
   'Crème hydratante pour les mains – Matcha': 'Crème Hydratante pour les Mains – Matcha'
 };
 

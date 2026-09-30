@@ -219,10 +219,8 @@
     }
   ],
   "commitments": [
-    "Formules vegan",
     "Minéraux de la mer Morte",
     "Sans cortisone",
-    "Non testé sur les animaux",
     "Fabriqué en Israël",
     "Emballages recyclables"
   ],
@@ -281,7 +279,7 @@
     }
   ],
   "newsletter": {
-    "title": "Inscrivez-vous à notre Newsletter",
+    "title": "Inscrivez-vous à notre lettre d’information",
     "text": "Recevez des offres exclusives et un accès anticipé aux nouveaux produits."
   },
   "policies": [
@@ -318,7 +316,7 @@
       "title": "Mentions légales"
     }
   ],
-  "fonts": "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Jost:wght@300;400;500&display=swap",
+  "fonts": "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=Jost:wght@300;400;500&display=swap",
   "heroSingle": {
     "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_2.jpg",
     "eyebrow": "Soins minéraux de la mer Morte",
@@ -367,9 +365,9 @@
       "text": "Le point le plus bas de la Terre, où l’eau concentre ses minéraux depuis des millénaires."
     },
     {
-      "value": "100 %",
-      "label": "Formules vegan",
-      "text": "Sans ingrédient d’origine animale, sans cortisone, non testées sur les animaux."
+      "value": "0 %",
+      "label": "De cortisone",
+      "text": "Des formules douces, pensées pour les peaux sensibles et réactives."
     },
     {
       "value": "14 j",
@@ -399,7 +397,7 @@
       {
         "eyebrow": "La formule",
         "title": "Le minéral, puis rien d’inutile",
-        "text": "Autour de l’eau de la mer Morte, nous ajoutons ce qui sert la peau et seulement cela : huiles d’amande douce, d’avocat, de pépins de raisin et de jojoba, aloe vera, vitamines A, B, C, E et F. Toutes nos formules sont vegan, sans cortisone, et ne sont jamais testées sur les animaux.",
+        "text": "Autour de l’eau de la mer Morte, nous ajoutons ce qui sert la peau et seulement cela : huiles d’amande douce, d’avocat, de pépins de raisin et de jojoba, aloe vera, vitamines A, B, C, E et F. Toutes nos formules sont sans cortisone.",
         "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_f_e.jpg"
       },
       {
@@ -422,7 +420,7 @@
     },
     {
       "q": "Quels modes de livraison proposez-vous ?",
-      "a": "Vous choisissez au moment du paiement, prix tout compris : Mondial Relay en point relais ou locker (5 €), Chronopost en point relais (5 €), Colissimo à domicile en 2 jours (6 €), Chronopost express en 1 jour, en point relais (10 €) ou à domicile (17 €). Dès 50 € d’achat, tous les modes sont offerts."
+      "a": "Vous choisissez au moment du paiement, prix tout compris : Mondial Relay en point relais ou consigne (5 €), Chronopost en point relais (5 €), Colissimo à domicile en 2 jours (6 €), Chronopost express en 1 jour, en point relais (10 €) ou à domicile (17 €). Dès 50 € d’achat, tous les modes sont offerts."
     },
     {
       "q": "Puis-je retourner un produit ?",
@@ -431,10 +429,6 @@
     {
       "q": "Vos produits conviennent-ils aux peaux sensibles ?",
       "a": "La gamme est formulée sans cortisone et pensée pour les peaux réactives. La Crème Apaisante S.O.S a été conçue précisément pour les irritations, rougeurs et démangeaisons."
-    },
-    {
-      "q": "Vos formules sont-elles vegan ?",
-      "a": "Toutes nos formules sont vegan et ne sont jamais testées sur les animaux. Les emballages sont recyclables."
     },
     {
       "q": "Où trouver vos produits en boutique ?",
@@ -562,7 +556,7 @@
       "name": "Mehdi A.",
       "city": "Rouen",
       "rating": 5,
-      "product": "Crème Hydratante pour les Mains – Ocean",
+      "product": "Crème Hydratante pour les Mains – Océan",
       "text": "Absorbé en dix secondes, je peux reprendre le clavier tout de suite. J’en ai racheté trois.",
       "demo": true
     },
@@ -578,7 +572,7 @@
       "name": "Antoine R.",
       "city": "Reims",
       "rating": 4,
-      "product": "Beurre Corporel Aromatique – Ocean",
+      "product": "Beurre Corporel Aromatique – Océan",
       "text": "Texture riche, il faut le chauffer entre les mains. Une fois étalé, plus aucune sensation de gras.",
       "demo": true
     },

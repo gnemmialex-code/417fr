@@ -597,7 +597,7 @@ function honeypot() {
 function newsletter() {
   return `<section class="section section--sm news">
   <div class="container"${reveal(0, 'fade')}>
-    <p class="eyebrow" style="color:var(--clay)">Newsletter</p>
+    <p class="eyebrow" style="color:var(--clay)">Lettre d’information</p>
     <h2 class="title title--md">${escapeHtml(site.newsletter.title)}</h2>
     <p class="lede">${escapeHtml(site.newsletter.text)}</p>
     <form class="news__form" data-site-form="newsletter" data-success="Merci, votre inscription est enregistrée.">
@@ -634,7 +634,7 @@ function footer() {
   return `<footer class="footer">
   <div class="container footer__top">
     <div class="footer__brand">
-      <img src="${site.logoMark}" alt="417 France" width="160" height="64">
+      <img src="${site.logoLight}" alt="417 France" width="240" height="100" loading="lazy">
       <p>${escapeHtml(settings.city ? settings.address + ', ' + settings.zip + ' ' + settings.city : site.store.address)}</p>
     </div>
     <nav class="footer__cols" aria-label="Liens de pied de page">
@@ -966,6 +966,28 @@ ${bestProducts.length ? `<section class="section section--sm section--best secti
   </div>
 </section>
 
+<section class="section section--sm section--story" aria-labelledby="story-title">
+  <div class="container story">
+    <div class="story__media"${reveal(0, 'scale')}>
+      <img class="img-fade" src="${story.image}" alt="La mer Morte" loading="lazy" width="900" height="1125">
+    </div>
+    <div class="story__body"${reveal(1)}>
+      <p class="eyebrow">${escapeHtml(story.eyebrow)}</p>
+      <h2 class="title" id="story-title">${escapeHtml(story.title)}</h2>
+      <p>${escapeHtml(story.text)}</p>
+      <a class="link" href="${safeUrl(story.url)}">${escapeHtml(story.cta)} ${icons.right}</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--sm section--facts section--ink" aria-label="Nos repères">
+  <div class="container">
+    <div class="facts">
+      ${facts}
+    </div>
+  </div>
+</section>
+
 <section class="section section--sm section--videos" aria-labelledby="videos-title">
   <div class="container">
     <div class="head"${reveal(0, 'fade')}>
@@ -1003,28 +1025,6 @@ ${moreProducts.length ? `<section class="section section--sm section--more secti
     </div>
   </div>
 </section>` : ''}
-
-<section class="section section--sm section--story" aria-labelledby="story-title">
-  <div class="container story">
-    <div class="story__media"${reveal(0, 'scale')}>
-      <img class="img-fade" src="${story.image}" alt="La mer Morte" loading="lazy" width="900" height="1125">
-    </div>
-    <div class="story__body"${reveal(1)}>
-      <p class="eyebrow">${escapeHtml(story.eyebrow)}</p>
-      <h2 class="title" id="story-title">${escapeHtml(story.title)}</h2>
-      <p>${escapeHtml(story.text)}</p>
-      <a class="link" href="${safeUrl(story.url)}">${escapeHtml(story.cta)} ${icons.right}</a>
-    </div>
-  </div>
-</section>
-
-<section class="section section--sm section--facts section--ink" aria-label="Nos repères">
-  <div class="container">
-    <div class="facts">
-      ${facts}
-    </div>
-  </div>
-</section>
 
 <section class="section section--sm section--feature" aria-labelledby="feature-title">
   <div class="container">
@@ -1279,7 +1279,7 @@ function productPage(product) {
       <ul class="perks">
         <li>${icons.truck}<span>Livraison offerte dès ${settings.freeShippingThreshold || site.freeShippingThreshold} € d’achat</span></li>
         <li>${icons.shield}<span>Retour accepté sous 14 jours</span></li>
-        <li>${icons.leaf}<span>Formule vegan aux minéraux de la mer Morte</span></li>
+        <li>${icons.leaf}<span>Formule aux minéraux de la mer Morte</span></li>
       </ul>
       <div class="acc">
     ${sections}

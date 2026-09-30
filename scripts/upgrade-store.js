@@ -147,12 +147,12 @@ const VIDEO_SOURCES = [
   ['masque-de-boue-regenerant', 1, 'Le masque de boue, pas à pas'],
   ['beurre-corporel-aromatique-kiwi-mangue', 1, 'Texture du beurre corporel'],
   ['anti-oxidant-hand-moisturizer-milk-honey', 1, 'Mains douces en trente secondes'],
-  ['anti-oxidant-hand-moisturizer-ocean', 1, 'Parfum Ocean'],
+  ['anti-oxidant-hand-moisturizer-ocean', 1, 'Parfum Océan'],
   ['anti-oxidant-hand-moisturizer-matcha', 1, 'Parfum Matcha'],
   ['anti-oxidant-hand-moisturizer-kiwi-mango', 1, 'Parfum Kiwi & Mangue'],
   ['serum-hydratant-mineral-aqua', 1, 'Le sérum minéral'],
   ['creme-hydratante-peau-normale-a-seche', 1, 'Hydrater le matin'],
-  ['masque-gommant-aux-mineraux', 1, 'Le masque peel-off'],
+  ['masque-gommant-aux-mineraux', 1, 'Le masque pelable'],
   ['lotion-visage-hydratante-equilibrante', 2, 'La lotion équilibrante'],
   ['eau-micellaire-minerale', 1, 'Démaquiller en douceur'],
   ['gommage-corporel-aromatique-kiwi-mangue', 1, 'Gommage sous la douche'],
@@ -239,7 +239,7 @@ const DISCOUNT_SEEDS = [
    offerts dès le seuil de livraison gratuite. minDays et maxDays comptent les
    jours ouvrés après l'expédition. */
 const SHIPPING_METHODS = [
-  { id: 'mondial-relay', carrier: 'Mondial Relay', label: 'Point relais ou locker', type: 'relay', price: 5, minDays: 2, maxDays: 5 },
+  { id: 'mondial-relay', carrier: 'Mondial Relay', label: 'Point relais ou consigne', type: 'relay', price: 5, minDays: 2, maxDays: 5 },
   { id: 'chronopost-relais', carrier: 'Chronopost', label: 'Point relais', type: 'relay', price: 5, minDays: 2, maxDays: 5 },
   { id: 'colissimo-domicile', carrier: 'Colissimo', label: 'À domicile', type: 'home', price: 6, minDays: 2, maxDays: 2 },
   { id: 'chronopost-relais-express', carrier: 'Chronopost', label: 'Point relais express', type: 'relay', price: 10, minDays: 1, maxDays: 1 },
@@ -288,7 +288,7 @@ const content = {
     text: 'Nous puisons à 417 mètres sous le niveau de la mer, là où la mer Morte concentre les minéraux les plus rares. Nous les associons à des huiles végétales et à rien d’autre. Le résultat tient en trois gestes quotidiens et des textures qui ne pèsent pas.',
     points: [
       { title: 'Une source', text: 'L’eau de la mer Morte, infusée directement dans chaque formule.' },
-      { title: 'Une exigence', text: 'Vegan, sans cortisone, jamais testé sur les animaux.' },
+      { title: 'Une exigence', text: 'Sans cortisone, pensé pour les peaux sensibles.' },
       { title: 'Un usage', text: 'Nettoyer, traiter, nourrir. Trois minutes, matin et soir.' }
     ],
     cta: 'Lire notre histoire',
@@ -345,6 +345,72 @@ const content = {
   freeShippingThreshold: site.freeShippingThreshold,
   countries: site.countries
 };
+
+/* ---------- Textes retirés ou francisés ---------- */
+
+/* La marque ne met plus en avant « vegan » ni « non testé sur les animaux »,
+   et le site ne garde aucun mot anglais. Les corrections s'appliquent à la
+   base existante (back-office compris), une seule fois : elles ne trouvent
+   plus rien à remplacer ensuite. Les adresses et les chemins d'image ne sont
+   jamais touchés. */
+const WORDING_FIXES = [
+  [/La formule du gommage corporel, végan, est/g, 'La formule du gommage corporel est'],
+  [/un nettoyant végan, que seul une formule/g, 'un nettoyant que seule une formule'],
+  [/cette formule végan procure/g, 'cette formule procure'],
+  [/Un masque peel off végan formulé/g, 'Un masque pelable formulé'],
+  [/Masque Peel Off enrichi/g, 'Masque pelable enrichi'],
+  [/Cette crème végan pour les yeux/g, 'Cette crème pour les yeux'],
+  [/la crème hydratante et végan infuse/g, 'la crème hydratante infuse'],
+  [/cette crème Végan nourrit/g, 'cette crème nourrit'],
+  [/Un gel moussant vegan pour/g, 'Un gel moussant pour'],
+  [/ Toutes nos formules sont vegan, sans cortisone, et ne sont jamais testées sur les animaux\./g,
+    ' Toutes nos formules sont sans cortisone.'],
+  [/Vegan, sans cortisone, jamais testé sur les animaux\./g, 'Sans cortisone, pensé pour les peaux sensibles.'],
+  [/Inscrivez-vous à notre Newsletter/g, 'Inscrivez-vous à notre lettre d’information'],
+  [/(p|P)oint relais ou locker/g, '$1oint relais ou consigne'],
+  [/Le masque peel-off/g, 'Le masque pelable'],
+  [/\bOcean\b/g, 'Océan']
+];
+
+function fixText(value) {
+  if (typeof value !== 'string' || /^(\/|https?:)/.test(value)) return value;
+  return WORDING_FIXES.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), value);
+}
+
+function fixDeep(node) {
+  if (Array.isArray(node)) return node.map(fixDeep);
+  if (node && typeof node === 'object') {
+    Object.keys(node).forEach((key) => { node[key] = fixDeep(node[key]); });
+    return node;
+  }
+  return fixText(node);
+}
+
+const REMOVED_COMMITMENTS = ['Formules vegan', 'Non testé sur les animaux'];
+
+function cleanContent(data) {
+  const c = data.content;
+  /* Les polices ne se règlent pas dans le back-office : elles suivent la feuille de style. */
+  c.fonts = site.fonts;
+  if (Array.isArray(c.commitments)) {
+    c.commitments = c.commitments.filter((t) => REMOVED_COMMITMENTS.indexOf(t) === -1);
+  }
+  if (Array.isArray(c.faq)) c.faq = c.faq.filter((item) => !/vegan/i.test(item.q));
+  if (Array.isArray(c.facts)) {
+    const replacement = site.facts.find((f) => f.label === 'De cortisone');
+    c.facts = c.facts.map((f) => (/vegan/i.test(f.label) && replacement ? Object.assign({}, replacement) : f));
+  }
+  fixDeep(c);
+  data.products.forEach((product) => {
+    product.title = fixText(product.title);
+    product.excerpt = fixText(product.excerpt);
+    if (Array.isArray(product.description)) fixDeep(product.description);
+    if (Array.isArray(product.images)) product.images.forEach((img) => { img.alt = fixText(img.alt); });
+  });
+  if (Array.isArray(data.settings.shippingMethods)) {
+    data.settings.shippingMethods.forEach((m) => { m.label = fixText(m.label); });
+  }
+}
 
 /* ---------- Application ---------- */
 
@@ -434,6 +500,8 @@ const result = store.update((data) => {
   if (!Array.isArray(data.settings.shippingMethods)) {
     data.settings.shippingMethods = SHIPPING_METHODS.map((m) => Object.assign({}, m));
   }
+
+  cleanContent(data);
 
   store.log(data, 'Contenu du site importé', enriched + ' produits enrichis');
   return { enriched };

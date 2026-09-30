@@ -990,7 +990,7 @@
     return '<li><label class="relay">'
       + '<input type="radio" name="relay" value="' + index + '"' + (checked ? ' checked' : '') + '>'
       + '<span><span class="relay__name"><strong>' + escapeHtml(point.name) + '</strong>'
-      + (point.locker ? '<span class="relay__tag">Locker</span>' : '') + '</span><br>'
+      + (point.locker ? '<span class="relay__tag">Consigne</span>' : '') + '</span><br>'
       + '<span class="relay__address">' + escapeHtml(point.address) + ', ' + escapeHtml(point.zip + ' ' + point.city)
       + (distance ? ' · ' + distance : '') + '</span>'
       + (hours ? '<details class="relay__more"><summary>' + escapeHtml(tr('Horaires')) + '</summary><dl class="relay__hours">' + hours + '</dl></details>' : '')

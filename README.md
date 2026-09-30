@@ -477,7 +477,7 @@ hébergée par **Stripe Checkout**. De retour, `/commande/merci` vide le panier.
 
 | Mode | Transporteur | Prix | Délai après expédition |
 | --- | --- | --- | --- |
-| Point relais ou locker | Mondial Relay | 5 € | 2 à 5 jours |
+| Point relais ou consigne | Mondial Relay | 5 € | 2 à 5 jours |
 | Point relais | Chronopost | 5 € | 2 à 5 jours |
 | À domicile | Colissimo | 6 € | 2 jours |
 | Point relais express | Chronopost | 10 € | 1 jour |
