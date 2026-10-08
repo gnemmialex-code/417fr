@@ -94,6 +94,18 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/* Entoure chaque « 417 » visible d'un span .n417 (police dédiée). Ne touche
+   ni aux balises et attributs, ni aux scripts et styles, ni à « 417france ». */
+function mark417(html) {
+  return html
+    .split(/(<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>)/)
+    .map((part, i) => (i % 2 ? part : part.replace(/(^|[^\w&#])417(?!\w)/g, '$1<span class="n417">417</span>')))
+    .join('');
+}
+
+/* Les crèmes pour les mains sont le cadeau : elles n'ouvrent pas droit à l'offre. */
+const isHandCream = (product) => /pour les mains/i.test(product.title);
+
 /* Une description de résultat de recherche se lit jusqu'à 160 caractères
    environ. Au-delà le moteur coupe lui-même, et souvent au milieu d'un mot. */
 function metaDescription(value) {
@@ -355,6 +367,7 @@ const icons = {
   truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 7h11v9H2zM13 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>',
   leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M20 4C10 4 4 9 4 16c0 2 1 4 1 4s6-1 10-5 5-11 5-11Z"/><path d="M5 20c4-6 8-9 12-11" stroke-linecap="round"/></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z"/></svg>',
+  gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-1.5-3-5-3.5-5-1.2C7 7 9.5 7 12 7Zm0 0c1.5-3 5-3.5 5-1.2C17 7 14.5 7 12 7Z"/></svg>',
   star: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.8 2.7 5.9 6.3.7-4.7 4.3 1.3 6.3-5.6-3.2-5.6 3.2 1.3-6.3L3 9.4l6.3-.7L12 2.8Z"/></svg>'
 };
 
@@ -1153,7 +1166,7 @@ ${moreProducts.length ? `<section class="section section--sm section--more secti
   return layout({
     title: `417 France | ${site.tagline}`,
     description: site.description,
-    body: body + '\n' + identity,
+    body: mark417(body) + '\n' + identity,
     currentPath: '/', hasHero: true, canonical: '/',
     preloadImage: heroSlides[0] || ''
   });
@@ -1273,6 +1286,7 @@ function productPage(product) {
       <h1>${escapeHtml(product.title)}</h1>
       <p class="panel__price">${price}</p>
       <p class="panel__stock${product.available ? '' : ' is-out'}">${STOCK_NOTES[product.availability]}</p>
+      ${isHandCream(product) ? '' : `<p class="offer">${icons.gift}<span><strong>1 produit acheté = 1 crème pour les mains offerte</strong></span></p>`}
       <div class="buy" data-buy-anchor>
         ${buy}
       </div>
@@ -1329,7 +1343,7 @@ function storyPage() {
   const s = site.storyPage;
   const chapters = s.chapters.map((c, i) => `<div class="chapter${i % 2 ? ' chapter--flip' : ''}">
       <div class="chapter__media"${reveal(0, 'scale')}>
-        <img class="img-fade" src="${c.image}" alt="${escapeHtml(c.title)}" loading="lazy" width="900" height="1125">
+        <img class="img-fade" src="${c.image}" alt="${escapeHtml(c.title)}" loading="lazy" width="900" height="1125"${Number(c.zoom) > 0 ? ` style="transform:scale(${Number(c.zoom)})"` : ''}>
       </div>
       <div class="chapter__body"${reveal(1)}>
         <p class="eyebrow">${escapeHtml(c.eyebrow)}</p>

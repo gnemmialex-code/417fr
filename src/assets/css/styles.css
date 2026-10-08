@@ -4,6 +4,14 @@
    Fraunces (titres) / Jost (textes)
    ========================================================================== */
 
+@font-face {
+  font-family: "Narziss Drops";
+  src: url("/assets/fonts/Narziss-Drops.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --font-display: "Fraunces", "Times New Roman", serif;
   --font-body: "Jost", "Helvetica Neue", Arial, sans-serif;
@@ -655,6 +663,13 @@ body:not(.has-hero) main { padding-top: calc(var(--header-h) + var(--announce-h)
 .panel h1 { font-size: clamp(28px, 3.4vw, 46px); margin-block: 14px 16px; }
 .panel__price { display: flex; align-items: baseline; gap: 14px; font-family: var(--font-display); font-size: 24px; }
 .panel__price s { font-size: 17px; color: var(--muted-2); }
+/* « 417 » de l'accueil, dans la police de la marque */
+.n417 { font-family: "Narziss Drops", var(--font-display); font-weight: normal; }
+
+.offer { display: flex; gap: 11px; align-items: center; margin-top: 18px; padding: 13px 16px; border-radius: var(--r); background: var(--mineral-pale); color: var(--mineral); font-size: 13px; }
+.offer svg { width: 19px; height: 19px; flex: none; }
+.offer strong { font-weight: 500; }
+
 .panel__stock { display: inline-flex; align-items: center; gap: 9px; margin-top: 16px; font-size: 12.5px; color: var(--muted); }
 .panel__stock::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(45, 125, 79, 0.16); }
 .panel__stock.is-out::before { background: var(--muted-2); box-shadow: 0 0 0 3px rgba(154, 143, 131, 0.2); }

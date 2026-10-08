@@ -1630,6 +1630,7 @@
     if (!nodes.length || reduceMotion || !('IntersectionObserver' in window)) return;
 
     function run(node) {
+      var originalHtml = node.innerHTML;
       var original = node.textContent.trim();
       var parts = original.match(/^(\D*?)(\d[\d.,]*)(.*)$/);
       if (!parts) return;
@@ -1648,7 +1649,7 @@
         var eased = 1 - Math.pow(1 - t, 3);
         node.textContent = prefix + Math.round(target * eased) + suffix;
         if (t < 1) window.requestAnimationFrame(tick);
-        else node.textContent = original;
+        else node.innerHTML = originalHtml;
       }
       window.requestAnimationFrame(tick);
     }

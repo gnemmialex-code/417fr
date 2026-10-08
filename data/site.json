@@ -385,26 +385,45 @@
   },
   "storyPage": {
     "title": "Notre histoire",
-    "lead": "417 mètres sous le niveau de la mer, une eau unique. C’est de là que vient chacun de nos soins.",
+    "lead": "À 417 mètres sous le niveau de la mer, au point le plus bas de la terre, repose une eau aux propriétés uniques. C’est de cette richesse extraordinaire que naît chacun de nos soins.",
     "hero": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_2.jpg",
     "chapters": [
       {
+        "eyebrow": "Les origines",
+        "title": "Une histoire née dans le regard d’un artiste",
+        "image": "/assets/img/rue_droit.jpg",
+        "text": "Tout commence en 2003, dans l’œil d’un créateur en quête de beauté, d’harmonie et d’équilibre. Sculpteur reconnu, Moty Fridman façonne depuis des années la forme et la matière. Un jour, il décide de porter ce même regard sur la peau. Il s’entoure de chimistes et de scientifiques issus de laboratoires européens, avec une conviction : la beauté naît quand la peau retrouve son équilibre. La marque prend le nom de son berceau, 417, comme les 417 mètres sous le niveau de la mer, où tout prend sa source."
+      },
+      {
         "eyebrow": "La source",
         "title": "Un laboratoire à ciel ouvert",
-        "text": "La mer Morte n’est pas une mer comme les autres. Fermée, évaporée par le soleil du désert, elle concentre magnésium, potassium, calcium et brome dans des proportions qu’aucune autre eau ne possède. Depuis l’Antiquité, on vient s’y baigner pour apaiser la peau. Nos formules partent de cette eau, infusée directement, sans la diluer de promesses.",
-        "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_f_2.jpg"
+        "image": "/assets/img/kik03022_2_f_2.jpg",
+        "text": "La Mer Morte n’est pas une mer comme les autres. Fermée, évaporée par le soleil du désert, elle concentre magnésium, potassium, calcium et brome dans des proportions qu’aucune autre eau ne possède. Sur ses rives repose une boue noire, chargée de ces mêmes minéraux. Depuis l’Antiquité, on vient s’y baigner pour apaiser la peau. Le magnésium et le brome sont devenus notre signature : nos formules partent de cette eau et de cette boue, sans les diluer de promesses."
+      },
+      {
+        "eyebrow": "Notre approche",
+        "title": "Équilibre, précision, résultats",
+        "image": "/assets/img/chaque_jour.jpg",
+        "text": "Plutôt que de répondre à chaque désagrément séparément, nous croyons qu’une belle peau commence par une barrière forte, un équilibre retrouvé et une hydratation préservée. Une peau bien hydratée est une peau en bonne santé : chacune de nos formules est donc pensée pour préserver son hydratation naturelle, quel que soit son besoin. Purifier, apaiser, nourrir ou sublimer, sans jamais la priver d’eau. Chaque soin associe la richesse minérale de la Mer Morte à des actifs et des technologies modernes, dosés avec précision, pour des résultats visibles."
       },
       {
         "eyebrow": "La formule",
-        "title": "Le minéral, puis rien d’inutile",
-        "text": "Autour de l’eau de la mer Morte, nous ajoutons ce qui sert la peau et seulement cela : huiles d’amande douce, d’avocat, de pépins de raisin et de jojoba, aloe vera, vitamines A, B, C, E et F. Toutes nos formules sont sans cortisone.",
-        "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/KIK03022_2_ret_f_e.jpg"
+        "title": "Le minéral, et uniquement l’essentiel",
+        "image": "/assets/img/kik03022_2_ret_f_e.jpg",
+        "text": "Autour des trésors de la Mer Morte, nous ajoutons uniquement ce qui sert vraiment la peau : huiles d’amande douce, d’avocat, de pépins de raisin et de jojoba, beurre de karité, aloe vera, miel, vitamines A, B, C, E et F. Nos formules sont sans parabènes, sans huile minérale, sans phtalates, et respectent les normes européennes les plus exigeantes. Aucun de nos soins n’est testé sur les animaux, et plusieurs sont certifiés véganes."
       },
       {
         "eyebrow": "Le geste",
-        "title": "Trois minutes, matin et soir",
-        "text": "Un soin n’a de valeur que s’il trouve sa place dans une journée. Nos textures pénètrent vite, ne laissent pas de film gras et se parfument juste assez pour accompagner le geste sans l’encombrer. Nettoyer, traiter, nourrir : trois minutes suffisent.",
-        "image": "https://cdn.shopify.com/s/files/1/0944/6044/5005/files/854_Aromatic-Deep-Nutrition-Body-Butter-Milk-Honey_Serenity-Legend_Lifestyle_result.webp"
+        "title": "Quelques minutes, chaque jour",
+        "image": "/assets/img/generatedimageoctober27_2025-9_47am_cf7de603-5c7b-40de-af08-2ac87fba7ea7.jpg",
+        "text": "Un soin n’a de valeur que s’il trouve sa place dans une journée. Nos textures pénètrent vite, ne laissent pas de film gras et se parfument juste assez pour accompagner le geste sans l’encombrer. Nettoyer, apaiser, nourrir : quelques minutes suffisent. Et quand le temps le permet, offrez-vous un rituel sensoriel plus long et plus complet, comme notre masque magnétique, pour une vraie parenthèse bien-être.",
+        "zoom": 1.15
+      },
+      {
+        "eyebrow": "Aujourd’hui",
+        "title": "De la Mer Morte à la France",
+        "image": "/assets/img/a_la_france.jpg",
+        "text": "Plus de vingt ans après sa création, la marque rayonne dans plus de quinze pays. Aujourd’hui, 417 France vous ouvre les portes de cet univers et vous invite à découvrir, à votre tour, les trésors de la Mer Morte."
       }
     ]
   },
