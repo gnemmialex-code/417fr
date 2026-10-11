@@ -872,9 +872,11 @@ function homePage() {
   const story = site.storyTeaser;
   const feature = site.feature;
 
-  const featureMedia = feature.src
-    ? `<video class="feature__video" src="${escapeHtml(feature.src)}" poster="${escapeHtml(feature.poster)}" controls playsinline preload="metadata"></video>`
-    : `<img class="img-fade" src="${escapeHtml(feature.poster)}" alt="${escapeHtml(feature.title)}" loading="lazy" width="1600" height="900">
+  const featureMedia = feature.youtube
+    ? `<iframe class="feature__video" src="https://www.youtube.com/embed/${escapeHtml(feature.youtube)}?autoplay=1&mute=1&loop=1&playlist=${escapeHtml(feature.youtube)}&controls=1&rel=0&modestbranding=1" title="${escapeHtml(feature.title)}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`
+    : feature.src
+      ? `<video class="feature__video" src="${escapeHtml(feature.src)}" poster="${escapeHtml(feature.poster)}" controls playsinline preload="metadata"></video>`
+      : `<img class="img-fade" src="${escapeHtml(feature.poster)}" alt="${escapeHtml(feature.title)}" loading="lazy" width="1600" height="900">
        <span class="feature__play">${icons.play}</span>`;
 
   /* Plusieurs visuels : le hero les fait defiler. Un seul : rien ne bouge. */

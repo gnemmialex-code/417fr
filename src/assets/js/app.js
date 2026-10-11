@@ -2288,6 +2288,81 @@
 
   /* ---------- Démarrage ---------- */
 
+  /* ---------- Pop-up offre crème mains ---------- */
+
+  function initPromoPopup() {
+    var PROMO_KEY = '417france.promo-seen';
+    try { if (window.sessionStorage.getItem(PROMO_KEY)) return; } catch (e) { return; }
+
+    var overlay = document.createElement('div');
+    overlay.className = 'promo-popup';
+    overlay.innerHTML =
+      '<div class="promo-popup__panel">' +
+        '<button type="button" class="promo-popup__close" aria-label="Fermer">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>' +
+        '</button>' +
+        '<div class="promo-popup__img">' +
+          '<div class="promo-popup__gift">' +
+            '<img src="/assets/img/735.png" alt="Crème Hydratante pour les Mains" width="300" height="300">' +
+            '<svg class="promo-popup__bow" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+              '<defs>' +
+                '<linearGradient id="rbn1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.35"/><stop offset="50%" stop-color="#8b1a1a"/><stop offset="100%" stop-color="#5c0e0e"/></linearGradient>' +
+                '<linearGradient id="rbn2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#fff" stop-opacity="0.3"/><stop offset="50%" stop-color="#8b1a1a"/><stop offset="100%" stop-color="#5c0e0e"/></linearGradient>' +
+                '<linearGradient id="bow1" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0%" stop-color="#c62828"/><stop offset="40%" stop-color="#8b1a1a"/><stop offset="100%" stop-color="#5c0e0e"/></linearGradient>' +
+                '<linearGradient id="bow2" x1="0.8" y1="0" x2="0.2" y2="1"><stop offset="0%" stop-color="#ef5350"/><stop offset="35%" stop-color="#c62828"/><stop offset="100%" stop-color="#7f1d1d"/></linearGradient>' +
+                '<linearGradient id="bowHL" x1="0.3" y1="0" x2="0.7" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.55"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+              '</defs>' +
+              '<rect x="95" y="-10" width="12" height="160" rx="1" fill="url(#rbn1)"/>' +
+              '<rect x="95.5" y="-10" width="1.8" height="160" fill="#fff" opacity="0.18"/>' +
+              '<rect x="105.5" y="-10" width="1.2" height="160" fill="#fff" opacity="0.12"/>' +
+              '<rect x="-10" y="33" width="160" height="12" rx="1" fill="url(#rbn2)"/>' +
+              '<rect x="-10" y="33.5" width="160" height="1.8" fill="#fff" opacity="0.18"/>' +
+              '<rect x="-10" y="43.5" width="160" height="1.2" fill="#fff" opacity="0.12"/>' +
+              '<rect x="93" y="31" width="16" height="16" rx="1.5" fill="#7f1d1d"/>' +
+              '<rect x="94" y="32" width="14" height="14" rx="1" fill="#8b1a1a"/>' +
+              '<path d="M101 31C90 18 74 12 78 8s18 2 23 23z" fill="url(#bow2)" stroke="#fff" stroke-width="0.6" stroke-opacity="0.3"/>' +
+              '<path d="M101 31c-5-20-2-32 4-32s8 14 4 32z" fill="url(#bow1)" stroke="#fff" stroke-width="0.6" stroke-opacity="0.25"/>' +
+              '<path d="M101 31c5-20 2-32-4-32" fill="none" stroke="#fff" stroke-width="0.4" stroke-opacity="0.2"/>' +
+              '<path d="M101 31C112 18 128 12 124 8s-18 2-23 23z" fill="url(#bow1)" stroke="#fff" stroke-width="0.6" stroke-opacity="0.3"/>' +
+              '<path d="M101 31c11-13 24-19 20-23" fill="none" stroke="#fff" stroke-width="0.4" stroke-opacity="0.15"/>' +
+              '<path d="M101 31C90 18 74 12 78 8" fill="none" stroke="#fff" stroke-width="0.5" stroke-opacity="0.25"/>' +
+              '<ellipse cx="101" cy="31" rx="5" ry="4.5" fill="#8b1a1a" stroke="#fff" stroke-width="0.5" stroke-opacity="0.2"/>' +
+              '<ellipse cx="100" cy="30" rx="2.5" ry="2" fill="url(#bowHL)"/>' +
+              '<path d="M101 39c-4 12-10 26-14 38" stroke="#8b1a1a" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+              '<path d="M101 39c-4 12-10 26-14 38" stroke="#c62828" stroke-width="2" stroke-linecap="round" fill="none"/>' +
+              '<path d="M101 39c-3.5 11-9 24-13 36" stroke="#fff" stroke-width="0.5" stroke-opacity="0.2" stroke-linecap="round" fill="none"/>' +
+              '<path d="M101 39c4 14 8 28 10 40" stroke="#8b1a1a" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+              '<path d="M101 39c4 14 8 28 10 40" stroke="#c62828" stroke-width="2" stroke-linecap="round" fill="none"/>' +
+              '<path d="M101 39c3.5 13 7.5 27 9.5 38" stroke="#fff" stroke-width="0.5" stroke-opacity="0.2" stroke-linecap="round" fill="none"/>' +
+            '</svg>' +
+          '</div>' +
+        '</div>' +
+        '<div class="promo-popup__body">' +
+          '<p class="promo-popup__eyebrow">Offre exclusive</p>' +
+          '<h2 class="promo-popup__title">1 produit acheté&nbsp;=<br>1 crème pour les mains offerte</h2>' +
+          '<p class="promo-popup__text">Pour tout achat sur notre boutique, recevez une crème hydratante pour les mains en cadeau. Offre valable sur l’ensemble de la gamme, hors produits pour les mains.</p>' +
+          '<a class="btn btn--sm" href="/collections/tout-nos-produits">Découvrir nos soins</a>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { overlay.classList.add('is-open'); });
+    });
+
+    function close() {
+      overlay.classList.remove('is-open');
+      try { window.sessionStorage.setItem(PROMO_KEY, '1'); } catch (e) { /* */ }
+      setTimeout(function () { overlay.remove(); }, 400);
+    }
+
+    overlay.querySelector('.promo-popup__close').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+  }
+
+  setTimeout(initPromoPopup, 1500);
+
   initSmoothScroll();
   initProgress();
   initReveal();
