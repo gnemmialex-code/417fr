@@ -2359,6 +2359,9 @@
 
     overlay.querySelector('.promo-popup__close').addEventListener('click', close);
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    overlay.querySelector('.btn').addEventListener('click', function () {
+      try { window.sessionStorage.setItem(PROMO_KEY, '1'); } catch (e) { /* */ }
+    });
   }
 
   setTimeout(initPromoPopup, 1500);
