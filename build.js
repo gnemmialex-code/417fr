@@ -94,6 +94,11 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+function nl2br(html) {
+  if (/<(?:p|ul|ol|li|div|h[1-6]|blockquote|table|pre|hr)\b/i.test(html)) return html;
+  return html.replace(/\n/g, '<br>\n');
+}
+
 /* Entoure chaque « 417 » visible d'un span .n417 (police dédiée). Ne touche
    ni aux balises et attributs, ni aux scripts et styles, ni à « 417france ». */
 function mark417(html) {
@@ -1228,7 +1233,7 @@ function productPage(product) {
 
   const sections = product.sections.map((s, i) => `<details${i === 0 ? ' open' : ''}>
       <summary>${escapeHtml(s.title)}</summary>
-      <div class="acc__body">${s.body}</div>
+      <div class="acc__body">${nl2br(s.body)}</div>
     </details>`).join('\n    ');
 
   const others = products
